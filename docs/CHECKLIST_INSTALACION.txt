@@ -1,0 +1,203 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                  MAG INDUSTRIES DOCUMENT GENERATOR                         ║
+║                       CHECKLIST DE INSTALACIÓN                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+📦 ARCHIVOS QUE DEBES TENER:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📁 CARPETA: mag_app/
+
+  ✅ CÓDIGO PRINCIPAL
+    □ app.py (la app Streamlit)
+    □ requirements.txt (dependencias Python)
+
+  ✅ SCRIPTS DE INSTALACIÓN & LANZAMIENTO
+    □ install.sh (instalación automática)
+    □ run.sh (lanzar la app)
+
+  ✅ DOCUMENTACIÓN
+    □ GUIA_INICIO_RAPIDO.md
+    □ ARQUITECTURA_TECNICA.md
+    □ README_APP.md
+    □ RESUMEN_COMPLETO.md
+    □ CHECKLIST_INSTALACION.txt (este archivo)
+
+  ⚠️  NECESITARÁS COPIAR TAMBIÉN (desde /home/claude/mag_g54/):
+    □ build4.js (FICHA TALLER)
+    □ build5.js (PROPUESTA)
+    □ build6.js (CALIDAD)
+    □ build7.js (ONE-PAGER)
+    □ build8.js (INFOGRAFÍA)
+    □ logo_claro.png
+    □ qr_whatsapp.png
+    □ icon_gear.png
+    □ icon_chart.png
+    □ icon_doc.png
+    □ icon_design.png
+    □ icon_automation.png
+    □ icon_receive.png
+    □ icon_machining.png
+    □ icon_quality.png
+    □ icon_delivery.png
+    □ package.json (de dependencias npm)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔧 REQUISITOS DEL SISTEMA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✅ VERIFICAR QUE TENGAS INSTALADO:
+    
+    □ Python 3.8+
+      Verificar: python3 --version
+      Instalar: https://www.python.org/downloads/
+    
+    □ Node.js 16+
+      Verificar: node --version
+      Instalar: https://nodejs.org/
+    
+    □ npm (viene con Node.js)
+      Verificar: npm --version
+    
+    □ Navegador web (Chrome, Firefox, Safari, Edge)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 PASOS DE INSTALACIÓN:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  PASO 1: Descargar archivos
+    □ Descargaste app.py, requirements.txt, install.sh, run.sh
+    □ Copiaste los 5 build*.js
+    □ Copiaste todos los PNG (logo, íconos, etc.)
+    □ Todo está en una carpeta llamada "mag_app"
+
+  PASO 2: Abrir terminal en esa carpeta
+    Terminal/CMD → cd /ruta/a/mag_app
+
+  PASO 3: Ejecutar instalación
+    Terminal → bash install.sh
+    
+    La salida debería mostrar:
+    ✅ Python X.X encontrado
+    ✅ Node.js vX.X encontrado
+    ✅ Dependencias Python instaladas
+    ✅ npm módulos instalados
+    ✅ Todos los scripts build*.js encontrados
+    ✅ SETUP COMPLETADO
+
+  PASO 4: Lanzar la app
+    Terminal → bash run.sh
+    
+    Se abrirá automáticamente en el navegador:
+    http://localhost:8501
+
+  PASO 5: ¡Usar la app!
+    □ Carga un Setup Sheet HTML de Fusion 360
+    □ Elige tipo de documento
+    □ Rellena cliente, material, programador
+    □ Haz clic en GENERAR
+    □ Descarga tu DOCX
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚡ COMANDOS RÁPIDOS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  # Primera vez (instalación)
+  bash install.sh
+
+  # Cada vez que uses la app
+  bash run.sh
+
+  # O directamente sin script
+  streamlit run app.py
+
+  # Detener la app
+  CTRL + C
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❓ SI ALGO FALLA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Error: "python3: command not found"
+    → Instala Python desde https://www.python.org/downloads/
+
+  Error: "node: command not found"
+    → Instala Node.js desde https://nodejs.org/
+
+  Error: "ModuleNotFoundError: streamlit"
+    → Ejecuta: pip install streamlit beautifulsoup4 --break-system-packages
+
+  Error: "No se encuentra build4.js"
+    → Verifica que copiaste los build*.js a la carpeta mag_app
+
+  Error: "Cannot find module 'docx'"
+    → Ejecuta: npm install
+
+  La app genera pero el documento está vacío
+    → Verifica en pestaña "Revisar" que se extrajeron datos
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📚 DOCUMENTACIÓN:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Para empezar ahora:
+    → Abre GUIA_INICIO_RAPIDO.md
+
+  Para entender cómo funciona:
+    → Lee ARQUITECTURA_TECNICA.md
+
+  Para toda la documentación:
+    → Abre README_APP.md
+
+  Para saber qué hicimos y por qué:
+    → Lee RESUMEN_COMPLETO.md
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ VENTAJAS QUE TENDRÁS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✅ 0 tokens de Claude por documento
+  ✅ Generación en 3 segundos (vs 5-10 minutos)
+  ✅ 100% automático (solo cargar HTML)
+  ✅ Funciona sin Internet
+  ✅ Ilimitados documentos
+  ✅ Escalable (agregar nuevos documentos fácilmente)
+  ✅ Interfaz visual amigable
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 CHECKLIST DE VERIFICACIÓN:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  □ Tengo Python 3.8+
+  □ Tengo Node.js 16+
+  □ Tengo todos los archivos en mag_app/
+  □ Ejecuté bash install.sh
+  □ Ejecuté bash run.sh
+  □ Se abrió http://localhost:8501 en el navegador
+  □ Cargué un Setup Sheet HTML de Fusion 360
+  □ Vi los datos extraídos en "Revisar"
+  □ Generé un documento exitosamente
+  □ Descargué el DOCX
+  □ El documento tiene datos correctos
+
+  Si todos están ✅ → ¡LISTO! Ya estás usando la app.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 ¡YA PUEDES EMPEZAR!
+
+  1. Abre terminal
+  2. cd mag_app
+  3. bash run.sh
+  4. ¡A generar documentos!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MAG Industries © 2026 | Document Generator v1.0

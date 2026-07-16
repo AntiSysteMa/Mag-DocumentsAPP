@@ -1,0 +1,30 @@
+{
+  "name": "mag-industries-doc-generator",
+  "version": "1.0.0",
+  "description": "MAG Industries Document Generator - Generador de documentos técnicos desde Setup Sheet de Fusion 360",
+  "main": "streamlit_app.py",
+  "scripts": {
+    "ficha-taller": "cd generators && node build4.js",
+    "propuesta": "cd generators && node build5.js",
+    "calidad": "cd generators && node build6.js",
+    "one-pager": "cd generators && node build7.js",
+    "infografia": "cd generators && node build8.js"
+  },
+  "keywords": [
+    "CAD",
+    "CNC",
+    "Fusion360",
+    "DOCX",
+    "Document Generator",
+    "MAG Industries"
+  ],
+  "author": "MAG Industries",
+  "license": "MIT",
+  "dependencies": {
+    "docx": "^8.5.0"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  }
+}

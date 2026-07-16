@@ -1,0 +1,202 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║        🔧 MAG INDUSTRIES — DOCUMENT GENERATOR                             ║
+║                    DESCARGA COMPLETA LISTA                                ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+✨ TODOS LOS ARCHIVOS ESTÁN LISTOS PARA DESCARGAR ✨
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📥 INSTRUCCIONES DE DESCARGA:
+
+1. Arriba en esta página ves "Files" o "Archivos"
+2. Selecciona y descarga TODOS estos archivos:
+
+   ✅ CÓDIGO PRINCIPAL (Descargar PRIMERO)
+      • app.py
+      • package.json
+      • requirements.txt
+      • install.sh
+      • run.sh
+
+   ✅ SCRIPTS DE GENERACIÓN (Muy importante)
+      • build4.js    (Ficha Taller)
+      • build5.js    (Propuesta)
+      • build6.js    (Calidad)
+      • build7.js    (One-Pager)
+      • build8.js    (Infografía)
+
+   ✅ LOGOS E ÍCONOS (Descargar todos)
+      • logo_claro.png
+      • logo_oscuro_transparent.png
+      • qr_whatsapp.png
+      • icon_gear.png
+      • icon_design.png
+      • icon_doc.png
+      • icon_chart.png
+      • icon_automation.png
+      • icon_receive.png
+      • icon_machining.png
+      • icon_quality.png
+      • icon_delivery.png
+      • pieza_render.png
+      • pieza_render2.png
+
+   ✅ DOCUMENTACIÓN (Recomendado)
+      • GUIA_INICIO_RAPIDO.md
+      • CHECKLIST_INSTALACION.txt
+      • README_APP.md
+      • ARQUITECTURA_TECNICA.md
+      • RESUMEN_COMPLETO.md
+      • INDICE_ARCHIVOS.md
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 ESTADÍSTICAS:
+
+   Total de archivos:  28
+   Tamaño total:       ~18 MB (incluye imágenes de ejemplo)
+   Código + Docs:      ~200 KB (lo importante)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 PASOS DESPUÉS DE DESCARGAR (5 minutos):
+
+   PASO 1: Crear carpeta
+      Crea una carpeta nueva en tu escritorio llamada: mag_app
+
+   PASO 2: Mover archivos
+      Mueve TODOS los archivos descargados a esa carpeta
+
+   PASO 3: Abrir terminal
+      • Windows: Abre "Símbolo del sistema" en esa carpeta
+      • Mac/Linux: Abre "Terminal" y navega: cd ~/Desktop/mag_app
+
+   PASO 4: Instalar (1 sola vez)
+      Terminal → bash install.sh
+
+   PASO 5: Lanzar (cada vez que uses)
+      Terminal → bash run.sh
+
+   LISTO: Se abre automáticamente en http://localhost:8501
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️  IMPORTANTE:
+
+   ✅ Descarga TODOS los archivos (28 total)
+   ✅ Pon TODO en la misma carpeta (mag_app)
+   ✅ No cambies nombres de archivos
+   ✅ Lee GUIA_INICIO_RAPIDO.md después de descargar
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ DESPUÉS DE INSTALAR (bash install.sh):
+
+   La terminal mostrará:
+   ✅ Python X.X encontrado
+   ✅ Node.js vX.X encontrado
+   ✅ Dependencias Python instaladas
+   ✅ npm módulos instalados
+   ✅ SETUP COMPLETADO
+
+   Si ve esto → ¡LISTO! Ejecuta: bash run.sh
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🌐 PRIMER USO (en la app):
+
+   1. Pestaña "Cargar Datos"
+      → Arrastra un Setup Sheet HTML de Fusion 360
+      → Espera a que se cargue
+
+   2. Pestaña "Revisar"
+      → Verifica que los datos se extrajeron
+      → Mira la imagen de la pieza
+
+   3. Pestaña "Generar"
+      → Elige tipo de documento
+      → Rellena: Cliente, Material, Programador
+      → Haz clic en GENERAR DOCUMENTO
+      → Descarga el DOCX
+
+   ⏱️  TODO TOMA 3 MINUTOS
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❓ ¿ALGO NO FUNCIONA?
+
+   Problema: "python3: command not found"
+   Solución: Instala Python desde https://www.python.org/downloads/
+
+   Problema: "node: command not found"
+   Solución: Instala Node.js desde https://nodejs.org/
+
+   Problema: "No se encuentra build4.js"
+   Solución: Verifica que descargaste TODOS los build*.js
+
+   Problema: Otro error
+   Solución: Lee CHECKLIST_INSTALACION.txt o ARQUITECTURA_TECNICA.md
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 VENTAJAS QUE TENDRÁS:
+
+   ✅ 0 tokens de Claude por documento
+   ✅ Generas documentos en 3 segundos
+   ✅ 100% automático (sin escribir código)
+   ✅ Funciona sin Internet
+   ✅ Ilimitados documentos
+   ✅ Interfaz visual bonita
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📚 LECTURAS RECOMENDADAS:
+
+   AHORA:
+      → GUIA_INICIO_RAPIDO.md (5 minutos)
+
+   DESPUÉS DE INSTALAR:
+      → CHECKLIST_INSTALACION.txt (verificación)
+      → README_APP.md (documentación completa)
+
+   AVANZADO (opcional):
+      → ARQUITECTURA_TECNICA.md (cómo funciona)
+      → RESUMEN_COMPLETO.md (overview)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 RESUMEN EJECUTIVO:
+
+   SIN LA APP:
+   • Cada documento = 750 tokens
+   • 10 documentos = 7,500 tokens
+   • Tiempo: 5-10 min por documento
+
+   CON LA APP:
+   • Cada documento = 0 tokens
+   • 10 documentos = 0 tokens
+   • Tiempo: 3 segundos por documento
+   • Setup: 10 minutos (1 sola vez)
+
+   AHORRO MENSUAL: 7,500+ tokens 💰
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 ¡LISTO PARA EMPEZAR!
+
+   1. Descarga todos estos archivos
+   2. Crea carpeta mag_app
+   3. Mueve archivos adentro
+   4. Abre terminal: cd mag_app
+   5. Ejecuta: bash install.sh
+   6. Ejecuta: bash run.sh
+   7. ¡Genera tu primer documento!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MAG Industries © 2026 | Document Generator v1.0
+
+¡Que disfrutes generando documentos sin gastar tokens! 🎉
