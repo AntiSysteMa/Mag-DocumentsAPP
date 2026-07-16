@@ -42,8 +42,8 @@ mag_app/
 Requisitos: **Python 3.10+** y **Node.js 18+**.
 
 ```bash
-git clone https://github.com/<TU_USUARIO>/mag-doc-generator.git
-cd mag-doc-generator
+git clone https://github.com/AntiSysteMa/Mag-DocumentsAPP.git
+cd Mag-DocumentsAPP
 
 # Dependencias Python
 pip install -r requirements.txt
