@@ -6,6 +6,28 @@ const {
   PageBreak,
 } = require("docx");
 
+// ---------- DATOS DE ENTRADA ----------
+// Solo se autorrellena la cabecera (cliente, pieza, material, fecha y
+// revisión): las mediciones se toman físicamente tras el mecanizado y se
+// completan a mano en el Word, como hasta ahora.
+const D = (() => {
+  const p = process.env.GENERATOR_DATA;
+  if (!p || !fs.existsSync(p)) return {};
+  try { return JSON.parse(fs.readFileSync(p, "utf8")); }
+  catch (e) { console.error("GENERATOR_DATA ilegible:", e.message); return {}; }
+})();
+
+const v = (value, fallback) => {
+  if (value === null || value === undefined) return fallback;
+  const s = String(value).trim();
+  return s === "" ? fallback : s;
+};
+
+const REVISION = v(D.revision, "00");
+const PIEZA_REF = v(D.project_ref, "[REF-PIEZA]");
+const DOC_NUM = `${PIEZA_REF}-QC-${REVISION}`;
+const INSPECTION_DATE = v(D.inspection_date, "[DD/MM/AAAA]");
+
 const NAVY = "1B2A41";
 const ORANGE = "E07B39";
 const STEEL = "5A6B7A";
@@ -125,9 +147,9 @@ const headerTable = new Table({
       new TableCell({
         width: { size: 5156, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(),
         children: [
-          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Doc. Nº: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: "[REF-PIEZA]-QC-[REV]", size: FS_META, font: "Arial", bold: true, color: DARKTEXT })] }),
-          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Fecha inspección: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: "[DD/MM/AAAA]", size: FS_META, font: "Arial" })] }),
-          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Revisión: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: "[00]", size: FS_META, font: "Arial" })] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Doc. Nº: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: DOC_NUM, size: FS_META, font: "Arial", bold: true, color: DARKTEXT })] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Fecha inspección: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: INSPECTION_DATE, size: FS_META, font: "Arial" })] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Revisión: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: REVISION, size: FS_META, font: "Arial" })] }),
         ],
       }),
     ],
@@ -143,9 +165,9 @@ const datosGeneralesTable = new Table({
   width: { size: LEFT_W, type: WidthType.DXA },
   columnWidths: [gLabelW, gValueW],
   rows: [
-    fullRow("CLIENTE", "[Nombre cliente]", { italic: true, color: STEEL }),
-    fullRow("PIEZA / REFERENCIA", "[Nombre y referencia de pieza]", { italic: true, color: STEEL }),
-    fullRow("MATERIAL / DUREZA", "[Material] / [Dureza]", { italic: true, color: STEEL }),
+    fullRow("CLIENTE", v(D.client_name, "[Nombre cliente]"), D.client_name ? {} : { italic: true, color: STEEL }),
+    fullRow("PIEZA / REFERENCIA", v(D.project_ref, "[Nombre y referencia de pieza]"), D.project_ref ? {} : { italic: true, color: STEEL }),
+    fullRow("MATERIAL / DUREZA", v(D.material, "[Material] / [Dureza]"), D.material ? {} : { italic: true, color: STEEL }),
     fullRow("Nº PLANO / REVISIÓN", "[__] / [__]", { italic: true, color: STEEL }),
     fullRow("INSPECTOR", "[Nombre]", { italic: true, color: STEEL }),
     fullRow("INSTRUMENTOS UTILIZADOS", "[Ej: calibre, micrómetro, rugosímetro, durómetro]", { italic: true, color: STEEL }),

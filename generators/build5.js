@@ -6,6 +6,29 @@ const {
   LevelFormat,
 } = require("docx");
 
+// ---------- DATOS DE ENTRADA ----------
+// La app escribe un JSON con los datos de la propuesta y pasa su ruta en
+// GENERATOR_DATA. Sin esa variable el script sigue funcionando con datos de
+// ejemplo, para poder ejecutarlo suelto (`node build5.js`).
+const D = (() => {
+  const p = process.env.GENERATOR_DATA;
+  if (!p || !fs.existsSync(p)) return {};
+  try { return JSON.parse(fs.readFileSync(p, "utf8")); }
+  catch (e) { console.error("GENERATOR_DATA ilegible:", e.message); return {}; }
+})();
+
+const v = (value, fallback) => {
+  if (value === null || value === undefined) return fallback;
+  const s = String(value).trim();
+  return s === "" ? fallback : s;
+};
+
+const DOC_DATE = v(D.doc_date, (() => {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+})());
+
 const NAVY = "1B2A41";
 const ORANGE = "E07B39";
 const STEEL = "5A6B7A";
@@ -54,9 +77,9 @@ const headerTable = new Table({
         width: { size: 4006, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(),
         children: [
           new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "PROPUESTA COMERCIAL", bold: true, size: 22, font: "Arial", color: DARKTEXT })] }),
-          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Doc. Nº: ", size: 15, font: "Arial", color: STEEL }), new TextRun({ text: "MAG-PROP-001", size: 15, font: "Arial", bold: true })] }),
-          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Fecha: ", size: 15, font: "Arial", color: STEEL }), new TextRun({ text: "09/07/2026", size: 15, font: "Arial" })] }),
-          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Válida hasta: ", size: 15, font: "Arial", color: STEEL }), new TextRun({ text: "08/08/2026 (30 días)", size: 15, font: "Arial", bold: true })] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Doc. Nº: ", size: 15, font: "Arial", color: STEEL }), new TextRun({ text: v(D.doc_number, "MAG-PROP-001"), size: 15, font: "Arial", bold: true })] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Fecha: ", size: 15, font: "Arial", color: STEEL }), new TextRun({ text: DOC_DATE, size: 15, font: "Arial" })] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Válida hasta: ", size: 15, font: "Arial", color: STEEL }), new TextRun({ text: v(D.valid_until, "30 días desde la fecha de este documento"), size: 15, font: "Arial", bold: true })] }),
         ],
       }),
     ],
@@ -75,9 +98,9 @@ function labelValue(label, value, opts = {}) {
 }
 
 const destinatarioBlock = [
-  labelValue("Presentado a", "MECÁNICA J PARENTE"),
-  labelValue("Contacto", "[Nombre de contacto]", { italic: true }),
-  labelValue("Proyecto", "Fabricación de insertos de matriz — Ref. 02_111 OBERGESENK-RH"),
+  labelValue("Presentado a", v(D.client_name, "[Nombre de la empresa]"), { italic: !D.client_name }),
+  labelValue("Contacto", v(D.contact_name, "[Nombre de contacto]"), { italic: !D.contact_name }),
+  labelValue("Proyecto", v(D.project_title, "[Título del proyecto]"), { italic: !D.project_title }),
 ];
 
 // ---------- POSICIONAMIENTO ----------
@@ -96,8 +119,8 @@ const posicionamiento = new Paragraph({
 const alcanceParrafo = new Paragraph({
   spacing: { after: 160 },
   children: [new TextRun({
-    text: "Mecanizado CNC completo de 3 insertos de matriz de forja en acero D2 templado a 62 HRC, sobre centro de mecanizado HAAS VF-2 (3 ejes), a partir de los planos y bruto suministrados por el cliente. Incluye programación CAM, verificación de colisiones, mecanizado de desbaste y acabado, y control dimensional final bajo plano.",
-    size: 21, font: "Arial", color: DARKTEXT,
+    text: v(D.scope_text, "[Describe aquí el alcance técnico del proyecto: proceso, material, máquina y qué incluye el trabajo.]"),
+    size: 21, font: "Arial", color: DARKTEXT, italics: !D.scope_text,
   })],
 });
 
@@ -122,18 +145,18 @@ const especificacionesTable = new Table({
   width: { size: CONTENT_W, type: WidthType.DXA },
   columnWidths: [specL, specV],
   rows: [
-    specRow("PIEZA / REFERENCIA", "Insertos de matriz — 02_111 OBERGESENK-RH — 20182855"),
-    specRow("MATERIAL", "Acero D2, templado y revenido a 62 HRC"),
-    specRow("CANTIDAD", "3 unidades"),
-    specRow("MÁQUINA / PROCESO", "HAAS VF-2 (3 ejes) · CAM en Fusion 360 · postprocesador HAAS Next Generation"),
-    specRow("TOLERANCIAS", "Según DIN ISO 2768-mK, salvo indicación específica en plano"),
+    specRow("PIEZA / REFERENCIA", v(D.project_ref, "[Referencia de la pieza]")),
+    specRow("MATERIAL", v(D.material, "[Material y tratamiento]")),
+    specRow("CANTIDAD", v(D.quantity, "[Nº de unidades]")),
+    specRow("MÁQUINA / PROCESO", v(D.machine_process, "[Máquina y proceso de fabricación]")),
+    specRow("TOLERANCIAS", v(D.tolerances, "Según DIN ISO 2768-mK, salvo indicación específica en plano")),
   ],
 });
 
 // ---------- ENTREGABLES ----------
-const entregablesItems = [
+const entregablesItems = (Array.isArray(D.deliverables) && D.deliverables.length) ? D.deliverables : [
   "Programación CAM completa y verificada (simulación de colisiones incluida)",
-  "Mecanizado de desbaste y acabado de las 3 piezas en D2 a 62 HRC",
+  "Mecanizado de desbaste y acabado de las piezas según especificación",
   "Ficha de taller y hoja de herramientas de cada fase (documentación de proceso)",
   "Control dimensional final bajo plano, con reporte de calidad",
   "Piezas terminadas, limpias y embaladas para entrega",
@@ -156,19 +179,33 @@ function cronoRow(fase, dur, fill) {
     ],
   });
 }
+const FASES_FALLBACK = [
+  { fase: "Programación CAM y verificación", duracion: "1 – 2 días" },
+  { fase: "Mecanizado (desbaste + acabado)", duracion: "4 – 5 días" },
+  { fase: "Control dimensional y documentación", duracion: "1 día" },
+];
+const fases = (Array.isArray(D.timeline_phases) && D.timeline_phases.length) ? D.timeline_phases : FASES_FALLBACK;
+
 const cronogramaTable = new Table({
   width: { size: CONTENT_W, type: WidthType.DXA },
   columnWidths: cronoColW,
   rows: [
     cronoHeaderRow,
-    cronoRow("Programación CAM y verificación", "1 – 2 días", "FFFFFF"),
-    cronoRow("Mecanizado (desbaste + acabado, 3 piezas)", "4 – 5 días", LIGHTGREY),
-    cronoRow("Control dimensional y documentación", "1 día", "FFFFFF"),
-    cronoRow("PLAZO TOTAL ESTIMADO", "6 – 8 días laborables", LIGHTGREY),
+    ...fases.map((f, i) => cronoRow(v(f.fase, "—"), v(f.duracion, "—"), i % 2 === 0 ? "FFFFFF" : LIGHTGREY)),
+    cronoRow("PLAZO TOTAL ESTIMADO", v(D.total_duration, "6 – 8 días laborables"), fases.length % 2 === 0 ? "FFFFFF" : LIGHTGREY),
   ],
 });
 
 // ---------- INVERSIÓN (precio único) ----------
+const PRICE_TEXT = (() => {
+  const raw = D.price;
+  if (raw === null || raw === undefined || String(raw).trim() === "") return "[Precio] €";
+  const n = Number(String(raw).replace(/[^\d.,]/g, "").replace(",", "."));
+  if (isNaN(n)) return String(raw).trim();
+  return `${n.toLocaleString("es-ES")} €`;
+})();
+const PRICE_LABEL = v(D.price_label, "INVERSIÓN DEL PROYECTO — PRECIO ÚNICO");
+
 const inversionBox = new Table({
   width: { size: CONTENT_W, type: WidthType.DXA },
   columnWidths: [CONTENT_W],
@@ -178,8 +215,8 @@ const inversionBox = new Table({
     children: [new TableCell({
       width: { size: CONTENT_W, type: WidthType.DXA }, shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY }, margins: { top: 220, bottom: 220, left: 300, right: 300 },
       children: [
-        new Paragraph({ alignment: AlignmentType.CENTER, keepLines: true, keepNext: true, children: [new TextRun({ text: "INVERSIÓN DEL PROYECTO — PRECIO ÚNICO (3 PIEZAS)", bold: true, size: 20, font: "Arial", color: "FFFFFF" })] }),
-        new Paragraph({ alignment: AlignmentType.CENTER, keepLines: true, keepNext: true, spacing: { before: 120 }, children: [new TextRun({ text: "600 €", bold: true, size: 56, font: "Arial", color: ORANGE })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, keepLines: true, keepNext: true, children: [new TextRun({ text: PRICE_LABEL, bold: true, size: 20, font: "Arial", color: "FFFFFF" })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, keepLines: true, keepNext: true, spacing: { before: 120 }, children: [new TextRun({ text: PRICE_TEXT, bold: true, size: 56, font: "Arial", color: ORANGE })] }),
         new Paragraph({ alignment: AlignmentType.CENTER, keepLines: true, spacing: { before: 100 }, children: [new TextRun({ text: "Precio cerrado por el proyecto completo — no se factura por horas trabajadas. IVA no incluido.", italics: true, size: 17, font: "Arial", color: "D9D9D9" })] }),
       ],
     })],

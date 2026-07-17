@@ -70,27 +70,26 @@ En Windows también puedes hacer doble clic en `iniciar_app.bat`.
 
 ## 🔌 Cómo llegan los datos al documento
 
-La app escribe un JSON con los datos extraídos (ya editados) y pasa su ruta al
+La app escribe un JSON con los datos de cada documento y pasa su ruta al
 script Node en la variable de entorno `GENERATOR_DATA`. El script lo lee y
-compone el documento con esos valores.
+compone el documento con esos valores. No todos los documentos necesitan lo
+mismo: cada uno es de naturaleza distinta, así que la interfaz se adapta según
+el tipo elegido en la barra lateral.
 
-| Estado | Documento |
-|---|---|
-| ✅ Consume `GENERATOR_DATA` | **Ficha Taller** (`build4.js`) |
-| ⏳ Plantilla fija, aún sin conectar | Propuesta, Calidad, One-Pager, Infografía |
+| Documento | Origen de los datos | Notas |
+|---|---|---|
+| **Ficha Taller** | Setup Sheet de Fusion 360 (parser automático) | Herramientas, operaciones y renders pegados con Ctrl+V se incrustan tal cual el proyecto los traiga |
+| **Propuesta** | Formulario manual en «Revisar y Editar» | Precio, alcance y plazos son criterio comercial; Fusion 360 no los tiene |
+| **Calidad** | Solo cabecera automática (cliente/pieza/material) | El resto —mediciones, resultado— se rellena a mano en el Word tras la inspección física |
+| **One-Pager** / **Infografía** | Ninguno — plantilla fija | Son folletos de empresa, no de proyecto; se descargan siempre iguales |
 
-Los scripts sin conectar siguen generando su plantilla de ejemplo; se irán
-conectando con el mismo patrón que `build4.js`.
+Campos del JSON por documento:
 
-Campos del JSON: los extraídos del Setup Sheet (`project_ref`, `job_description`,
-`program_number`, `total_operations`, `total_tools`, `cycle_time`, `z_max`,
-`z_min`, `feedrate_max`, `rpm_max`, `cutting_distance`, `rapid_distance`,
-`bruto_dx/dy/dz`, `tools[]`, `operations[]`, `pieza_image_path`) más los del
-formulario (`client_name`, `material`, `programmer`, `machine`, `postprocessor`,
-`variant`, `revision`).
+- **Ficha Taller** (`build4.js`): `project_ref`, `job_description`, `program_number`, `total_operations`, `total_tools`, `cycle_time`, `z_max`, `z_min`, `feedrate_max`, `rpm_max`, `cutting_distance`, `rapid_distance`, `bruto_dx/dy/dz`, `tools[]`, `operations[]`, `pieza_image_path`, más `machine`, `postprocessor`, `variant`, `revision`.
+- **Propuesta** (`build5.js`): `project_ref`, `contact_name`, `project_title`, `scope_text`, `quantity`, `machine_process`, `tolerances`, `doc_number`, `deliverables[]`, `timeline_phases[]`, `total_duration`, `price`, `valid_until`.
+- **Calidad** (`build6.js`): `project_ref`, `inspection_date`, `revision` (más `client_name`/`material`, ya globales).
 
-Cada script funciona también suelto (`cd generators && node build4.js`): sin
-`GENERATOR_DATA` usa datos de ejemplo.
+Todos los scripts funcionan también sueltos (`cd generators && node build4.js`): sin `GENERATOR_DATA` usan datos de ejemplo.
 
 ## ☁️ Despliegue en Streamlit Community Cloud
 
