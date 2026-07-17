@@ -299,7 +299,41 @@ section[data-testid="stSidebar"] .stTextInput input {
     color: #fff;
     border: 1px solid rgba(255, 255, 255, 0.25);
 }
+section[data-testid="stSidebar"] .stTextInput input::placeholder {
+    color: rgba(255, 255, 255, 0.45);
+}
 section[data-testid="stSidebar"] hr { border-color: rgba(255,255,255,0.15); }
+
+/* Selector de la barra lateral. El control se pinta con el fondo claro del
+   tema aunque esté sobre el sidebar navy, así que su texto debe ser oscuro:
+   la regla general del sidebar lo dejaría blanco sobre blanco. La etiqueta,
+   que sí va sobre el navy, se mantiene en blanco. */
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] label,
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] label * {
+    color: #fff !important;
+}
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] input {
+    color: var(--mag-navy) !important;
+    -webkit-text-fill-color: var(--mag-navy) !important;
+    font-weight: 600;
+}
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] svg {
+    fill: var(--mag-navy);
+}
+
+[data-baseweb="popover"] [role="listbox"],
+[data-baseweb="popover"] ul[role="listbox"] {
+    background: #FFFFFF;
+}
+[data-baseweb="popover"] li[role="option"] {
+    color: var(--mag-navy) !important;
+    font-weight: 600;
+}
+[data-baseweb="popover"] li[role="option"] * { color: var(--mag-navy) !important; }
+[data-baseweb="popover"] li[role="option"][aria-selected="true"],
+[data-baseweb="popover"] li[role="option"]:hover {
+    background: rgba(224, 123, 57, 0.14);
+}
 
 /* ============ Expander y alerts ============ */
 .streamlit-expanderHeader, details summary { font-weight: 600; }

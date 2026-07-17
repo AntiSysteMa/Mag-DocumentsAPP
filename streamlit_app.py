@@ -92,6 +92,22 @@ with st.sidebar:
     )
     programmer_ok = validation_badge(programmer, "responsable")
 
+    with st.expander("🛠️ Máquina y documento"):
+        st.caption("Estos datos no vienen en el export de Fusion 360.")
+        machine = st.text_input(
+            "Máquina", value="HAAS VF-2 (3 ejes)",
+            help="Máquina donde se ejecuta el programa.")
+        postprocessor = st.text_input(
+            "Postprocesador", value="HAAS Next Generation",
+            help="Postprocesador usado al generar el código CNC.")
+        variant = st.text_input(
+            "Variante de la pieza", value="",
+            placeholder="Ej.: REPARADA",
+            help="Etiqueta entre paréntesis tras la referencia. Déjalo vacío para omitirla.")
+        revision = st.text_input(
+            "Revisión", value="00",
+            help="Revisión del documento; forma parte del Nº de documento.")
+
     st.markdown("---")
     node_ok = node_ready()
     if node_ok:
@@ -226,17 +242,46 @@ with tab2:
             else:
                 st.caption("El Setup Sheet no incluye imagen de la pieza.")
 
-        with st.expander("🧰 Datos en bruto (herramientas y operaciones)"):
-            st.text_area(
-                "Herramientas",
-                value=data.get('tools_raw') or "No detectado",
-                height=110, disabled=True,
-            )
-            st.text_area(
-                "Operaciones",
-                value=data.get('operations_raw') or "No detectado",
-                height=110, disabled=True,
-            )
+        tools = data.get('tools') or []
+        with st.expander(f"🧰 Herramientas detectadas ({len(tools)})", expanded=bool(tools)):
+            if tools:
+                st.dataframe(
+                    [{
+                        'Hta': t.get('label'),
+                        'Descripción': t.get('description'),
+                        'Ø (mm)': t.get('diameter'),
+                        'R. esq. (mm)': t.get('corner_radius'),
+                        'Long. (mm)': t.get('length'),
+                        'Flutes': t.get('flutes'),
+                        'Refrigerante': t.get('coolant'),
+                        'Tiempo': t.get('cycle_time'),
+                        '% del total': t.get('percentage'),
+                    } for t in tools],
+                    use_container_width=True, hide_index=True,
+                )
+            else:
+                st.caption("No se detectaron herramientas en el Setup Sheet.")
+
+        ops = data.get('operations') or []
+        with st.expander(f"⚙️ Operaciones detectadas ({len(ops)})", expanded=bool(ops)):
+            if ops:
+                st.dataframe(
+                    [{
+                        'Nº': o.get('number'),
+                        'Descripción': o.get('description'),
+                        'Estrategia': o.get('strategy'),
+                        'Hta': o.get('tool'),
+                        'RPM': o.get('rpm'),
+                        'Avance': o.get('feedrate'),
+                        'Z máx': o.get('z_max'),
+                        'Z mín': o.get('z_min'),
+                        'Refrigerante': o.get('coolant'),
+                        'Tiempo': o.get('cycle_time'),
+                    } for o in ops],
+                    use_container_width=True, hide_index=True,
+                )
+            else:
+                st.caption("No se detectaron operaciones en el Setup Sheet.")
 
 # ---------- 3. Generar ----------
 with tab3:
@@ -296,9 +341,15 @@ with tab3:
             docx_bytes, filename, error = generate_document(
                 doc_type,
                 edited,
-                client_name or "[Nombre cliente]",
-                material or "[No incluido en export]",
-                programmer or "[Nombre]",
+                client_name,
+                material,
+                programmer,
+                extra={
+                    'machine': machine,
+                    'postprocessor': postprocessor,
+                    'variant': variant,
+                    'revision': revision,
+                },
             )
             progress.progress(90, text="Finalizando…")
             time.sleep(0.15)

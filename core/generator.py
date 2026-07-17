@@ -6,6 +6,8 @@ relativas y escribe un .docx con nombre fijo, por eso se ejecutan con
 ``cwd=GENERATORS_DIR`` y luego se recoge el archivo por su nombre conocido.
 """
 
+import base64
+import binascii
 import json
 import os
 import shutil
@@ -64,12 +66,13 @@ def ensure_node_modules():
     return True, "Dependencias Node instaladas"
 
 
-def generate_document(doc_type, data, client_name, material, programmer):
+def generate_document(doc_type, data, client_name, material, programmer, extra=None):
     """Ejecuta el script Node.js correspondiente y devuelve el documento.
 
     Devuelve (docx_bytes, filename, None) en éxito o (None, None, error).
     Los datos del proyecto se exponen al script vía el archivo JSON apuntado
-    por la variable de entorno GENERATOR_DATA.
+    por la variable de entorno GENERATOR_DATA. ``extra`` son los campos que
+    no vienen en el export de Fusion (máquina, variante, revisión…).
     """
     entry = SCRIPT_MAP.get(doc_type)
     if not entry:
@@ -82,13 +85,30 @@ def generate_document(doc_type, data, client_name, material, programmer):
 
     temp_data_file = tempfile.NamedTemporaryFile(
         mode='w', suffix='.json', delete=False, encoding='utf-8')
+    temp_img_path = None
     try:
-        json.dump({
+        payload = {k: v for k, v in data.items() if k != 'pieza_image_base64'}
+        payload.update({
             'client_name': client_name,
             'material': material,
             'programmer': programmer,
-            **{k: v for k, v in data.items() if k != 'pieza_image_base64'},
-        }, temp_data_file, ensure_ascii=False)
+        })
+        payload.update(extra or {})
+
+        # El render de la pieza viaja incrustado en el HTML; los scripts Node
+        # necesitan un archivo en disco.
+        b64 = data.get('pieza_image_base64')
+        if b64:
+            try:
+                img = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+                img.write(base64.b64decode(b64))
+                img.close()
+                temp_img_path = img.name
+                payload['pieza_image_path'] = temp_img_path
+            except (binascii.Error, ValueError, OSError):
+                pass  # sin imagen extraída, el script usa su render de ejemplo
+
+        json.dump(payload, temp_data_file, ensure_ascii=False)
         temp_data_file.close()
 
         output_path = GENERATORS_DIR / output_name
@@ -119,7 +139,9 @@ def generate_document(doc_type, data, client_name, material, programmer):
     except Exception as e:  # noqa: BLE001 — el error se muestra en la UI
         return None, None, f"Error durante generación: {e}"
     finally:
-        try:
-            os.unlink(temp_data_file.name)
-        except OSError:
-            pass
+        for path in (temp_data_file.name, temp_img_path):
+            if path:
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass

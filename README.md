@@ -68,11 +68,29 @@ En Windows también puedes hacer doble clic en `iniciar_app.bat`.
    cliente/material/responsable y pulsa *Generar*. Descarga el `.docx`.
 5. **🗂️ Historial** — vuelve a descargar cualquier documento generado en la sesión.
 
-> **Nota sobre los datos:** los scripts `build4.js`–`build8.js` generan hoy los
-> documentos a partir de su plantilla interna (contenido de ejemplo/plantilla de
-> MAG Industries). La app les pasa los datos extraídos y editados en un JSON cuya
-> ruta va en la variable de entorno `GENERATOR_DATA`, de modo que los scripts
-> pueden empezar a consumirlos sin cambiar la orquestación (hoja de ruta).
+## 🔌 Cómo llegan los datos al documento
+
+La app escribe un JSON con los datos extraídos (ya editados) y pasa su ruta al
+script Node en la variable de entorno `GENERATOR_DATA`. El script lo lee y
+compone el documento con esos valores.
+
+| Estado | Documento |
+|---|---|
+| ✅ Consume `GENERATOR_DATA` | **Ficha Taller** (`build4.js`) |
+| ⏳ Plantilla fija, aún sin conectar | Propuesta, Calidad, One-Pager, Infografía |
+
+Los scripts sin conectar siguen generando su plantilla de ejemplo; se irán
+conectando con el mismo patrón que `build4.js`.
+
+Campos del JSON: los extraídos del Setup Sheet (`project_ref`, `job_description`,
+`program_number`, `total_operations`, `total_tools`, `cycle_time`, `z_max`,
+`z_min`, `feedrate_max`, `rpm_max`, `cutting_distance`, `rapid_distance`,
+`bruto_dx/dy/dz`, `tools[]`, `operations[]`, `pieza_image_path`) más los del
+formulario (`client_name`, `material`, `programmer`, `machine`, `postprocessor`,
+`variant`, `revision`).
+
+Cada script funciona también suelto (`cd generators && node build4.js`): sin
+`GENERATOR_DATA` usa datos de ejemplo.
 
 ## ☁️ Despliegue en Streamlit Community Cloud
 

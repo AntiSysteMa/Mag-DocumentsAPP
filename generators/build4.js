@@ -6,6 +6,50 @@ const {
   PageBreak,
 } = require("docx");
 
+// ---------- DATOS DE ENTRADA ----------
+// La app escribe un JSON con los datos del Setup Sheet y pasa su ruta en
+// GENERATOR_DATA. Sin esa variable el script sigue funcionando con datos de
+// ejemplo, para poder ejecutarlo suelto (`node build4.js`).
+const D = (() => {
+  const p = process.env.GENERATOR_DATA;
+  if (!p || !fs.existsSync(p)) return {};
+  try { return JSON.parse(fs.readFileSync(p, "utf8")); }
+  catch (e) { console.error("GENERATOR_DATA ilegible:", e.message); return {}; }
+})();
+
+// Devuelve el valor si tiene contenido; si no, el respaldo.
+const v = (value, fallback) => {
+  if (value === null || value === undefined) return fallback;
+  const s = String(value).trim();
+  return s === "" ? fallback : s;
+};
+
+// '01_216__KERN-RH__20182855' → ['01_216', 'KERN-RH', '20182855']
+const refParts = v(D.project_ref, "").split("__").filter(Boolean);
+const refCode = refParts[0] || "";
+const refName = refParts[1] || "";
+const refNum = refParts[2] || "";
+
+const REVISION = v(D.revision, "00");
+const DOC_NUM = refCode && refName
+  ? `${refCode}-${refName}-FT-${REVISION}`
+  : v(D.project_ref, "SIN-REFERENCIA") + `-FT-${REVISION}`;
+
+const PIEZA_REF = (() => {
+  if (!refCode) return v(D.project_ref, "[Sin referencia en el export]");
+  let s = `${refCode} ${refName}`.trim();
+  if (refNum) s += ` — ${refNum}`;
+  const variant = v(D.variant, "");
+  if (variant) s += ` (${variant})`;
+  return s;
+})();
+
+const DOC_DATE = v(D.doc_date, (() => {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+})());
+
 const NAVY = "1B2A41";
 const ORANGE = "E07B39";
 const STEEL = "5A6B7A";
@@ -120,9 +164,9 @@ function buildHeaderTable(titleLine1, titleLine2) {
         new TableCell({
           width: { size: 5156, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(), margins: { top: 40, bottom: 40, left: 0, right: 0 },
           children: [
-            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Doc. Nº: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: "02_111-OBERGESENK-RH-FT-00", size: FS_META, font: "Arial", bold: true, color: DARKTEXT })] }),
-            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Fecha: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: "09/07/2026", size: FS_META, font: "Arial" })] }),
-            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Revisión: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: "00", size: FS_META, font: "Arial" })] }),
+            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Doc. Nº: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: DOC_NUM, size: FS_META, font: "Arial", bold: true, color: DARKTEXT })] }),
+            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Fecha: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: DOC_DATE, size: FS_META, font: "Arial" })] }),
+            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Revisión: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: REVISION, size: FS_META, font: "Arial" })] }),
           ],
         }),
       ],
@@ -153,30 +197,54 @@ const datosGeneralesTable = new Table({
   width: { size: LEFT_W, type: WidthType.DXA },
   columnWidths: [gLabelW, gValueW],
   rows: [
-    fullRow("CLIENTE", "[Nombre cliente — no incluido en export]", { italic: true, color: STEEL }),
-    fullRow("PIEZA / REFERENCIA", "02_111 OBERGESENK-RH — 20182855 (REPARADA)"),
-    fullRow("MÁQUINA", "HAAS VF-2 (3 ejes)  ·  Postprocesador: HAAS Next Generation"),
-    fullRow("PROGRAMA CNC", "Program 1001 (O1001)   ·   Plano de trabajo: #1"),
-    fullRow("MATERIAL / DUREZA", "[No incluido en export — confirmar]", { italic: true, color: STEEL }),
-    fullRow("BRUTO (DX x DY x DZ)", "400 x 206.8 x 145.49 mm"),
-    fullRow("PROGRAMADOR / FASE", "[Nombre]  ·  DEBASTE"),
+    fullRow("CLIENTE", v(D.client_name, "[Nombre cliente — no incluido en export]"),
+      D.client_name ? {} : { italic: true, color: STEEL }),
+    fullRow("PIEZA / REFERENCIA", PIEZA_REF),
+    fullRow("MÁQUINA", `${v(D.machine, "HAAS VF-2 (3 ejes)")}  ·  Postprocesador: ${v(D.postprocessor, "HAAS Next Generation")}`),
+    fullRow("PROGRAMA CNC", `Program ${v(D.program_number, "—")} (O${v(D.program_number, "—")})   ·   Plano de trabajo: ${v(D.work_plane, "#1")}`),
+    fullRow("MATERIAL / DUREZA", v(D.material, "[No incluido en export — confirmar]"),
+      D.material ? {} : { italic: true, color: STEEL }),
+    fullRow("BRUTO (DX x DY x DZ)", brutoText()),
+    fullRow("PROGRAMADOR / FASE", `${v(D.programmer, "[Nombre]")}  ·  ${v(D.job_description, "—")}`),
   ],
 });
+
+function brutoText() {
+  const dx = v(D.bruto_dx, null), dy = v(D.bruto_dy, null), dz = v(D.bruto_dz, null);
+  if (!dx || !dy || !dz) return "[No detectado en el export]";
+  return `${dx} x ${dy} x ${dz} mm`;
+}
+
+// Los valores del Setup Sheet llegan con unidad ('15mm', '2918rpm'); para
+// componer las frases del resumen se usa solo el número.
+const numOf = (s) => {
+  const m = String(v(s, "")).replace(",", ".").match(/-?\d+(?:\.\d+)?/);
+  return m ? m[0] : null;
+};
+const withUnit = (s, unit) => {
+  const n = numOf(s);
+  return n === null ? "—" : `${n} ${unit}`;
+};
 
 const resumenTable = new Table({
   width: { size: LEFT_W, type: WidthType.DXA },
   columnWidths: [gLabelW, gValueW],
   rows: [
-    fullRow("OPERACIONES / HERRAMIENTAS", "10 operaciones   ·   4 herramientas"),
-    fullRow("RANGO EN Z", "de +15 mm a −83.45 mm"),
-    fullRow("AVANCE / RPM MÁXIMO", "3676.479 mm/min   ·   2918 rpm"),
-    fullRow("DISTANCIAS (CORTE / RÁPIDO)", "415534.78 mm   /   66223.66 mm"),
-    fullRow("TIEMPO TOTAL ESTIMADO", "19h 42m 16s", { bold: true }),
+    fullRow("OPERACIONES / HERRAMIENTAS", `${v(D.total_operations, "—")} operaciones   ·   ${v(D.total_tools, "—")} herramientas`),
+    fullRow("RANGO EN Z", `de ${withUnit(D.z_max, "mm")} a ${withUnit(D.z_min, "mm")}`),
+    fullRow("AVANCE / RPM MÁXIMO", `${withUnit(D.feedrate_max, "mm/min")}   ·   ${withUnit(D.rpm_max, "rpm")}`),
+    fullRow("DISTANCIAS (CORTE / RÁPIDO)", `${withUnit(D.cutting_distance, "mm")}   /   ${withUnit(D.rapid_distance, "mm")}`),
+    fullRow("TIEMPO TOTAL ESTIMADO", v(D.cycle_time, "—"), { bold: true }),
   ],
 });
 
 // ---------- IMAGEN DE PIEZA (right block) ----------
-const piezaImgBuffer = fs.readFileSync("pieza_render.png");
+// El Setup Sheet suele incrustar el render de la pieza; la app lo extrae y
+// deja la ruta en pieza_image_path. Si no viene, se usa el render de ejemplo.
+const piezaImgPath = (D.pieza_image_path && fs.existsSync(D.pieza_image_path))
+  ? D.pieza_image_path
+  : "pieza_render.png";
+const piezaImgBuffer = fs.readFileSync(piezaImgPath);
 const piezaImage = new ImageRun({ type: "png", data: piezaImgBuffer, transformation: { width: 430, height: 249 } });
 
 const imagenPiezaCell = new TableCell({
@@ -276,14 +344,54 @@ function buildToolCard(n, tipo, diam, resq, long, flutes, soporte, refrig, refri
   });
 }
 
-const toolsData = [
-  [1, "Bullnose Endmill CORTA JPARENTE", "12 mm", "6 mm", "35 mm", "2", "BT40 6MM End Mill Holder x 90mm (Haas Automation, ref. 04-0137)", "CON refrigerante (Fluido)", NAVY, "2h 39m 11s", "13.5%"],
-  [2, "Bullnose Endmill LARGA JPARENTE", "12 mm", "6 mm", "85 mm", "3", "BT40 6MM End Mill Holder x 90mm (Haas Automation, ref. 04-0137)", "SIN refrigerante (Desactivado)", REDWARN, "1h 59m 28s", "10.1%"],
-  [3, "Bullnose Endmill LARGA JPARENTE ACAB", "12 mm", "6 mm", "85 mm", "3", "BT40 6MM End Mill Holder x 90mm (Haas Automation, ref. 04-0137)", "SIN refrigerante (Desactivado)", REDWARN, "3h 42m 10s", "18.8%"],
-  [4, "Bullnose Endmill CORTA JPARENTE ACAB", "12 mm", "6 mm", "35 mm", "2", "BT40 6MM End Mill Holder x 90mm (Haas Automation, ref. 04-0137)", "CON refrigerante (Fluido)", NAVY, "11h 20m 26s", "57.6%"],
+// Datos de ejemplo, solo para ejecutar el script sin GENERATOR_DATA.
+const TOOLS_FALLBACK = [
+  { number: "1", label: "T1", description: "12mm Bullnose Endmill CORTA JPARENTE", diameter: "12", corner_radius: "6", length: "35", flutes: "2", holder_full: "BT40 6MM End Mill Holder x 90mm (Haas Automation, ref. 04-0137)", coolant: "Fluido", cycle_time: "2h 39m 11s", percentage: "13.5%" },
 ];
 
-const cards = toolsData.map(t => buildToolCard(...t));
+const tools = (Array.isArray(D.tools) && D.tools.length) ? D.tools : TOOLS_FALLBACK;
+
+// 'Desactivado' (o ausencia de refrigerante) marca el corte en seco, que la
+// ficha resalta en rojo por la regla de refrigeración de MAG Industries.
+function coolantInfo(coolant) {
+  const c = v(coolant, "");
+  const dry = !c || /desactiv|off|disabled|seco|none/i.test(c);
+  return {
+    text: dry ? `SIN refrigerante (${c || "Desactivado"})` : `CON refrigerante (${c})`,
+    color: dry ? REDWARN : NAVY,
+    dry,
+  };
+}
+
+// 'bullnose end mill' → 'Bullnose End Mill'
+const titleCase = (s) => v(s, "").replace(/\b\w/g, (m) => m.toUpperCase());
+
+// '12mm Bullnose Endmill CORTA JPARENTE' → 'Bullnose Endmill CORTA JPARENTE'
+function toolTitle(t) {
+  const desc = v(t.description, "");
+  if (desc) return desc.replace(/^\d+(?:\.\d+)?\s*mm\s+/i, "");
+  return titleCase(t.type) || `Herramienta ${v(t.label, "")}`;
+}
+
+const mm = (x) => (v(x, null) === null ? "—" : `${v(x, "")} mm`);
+
+const cards = tools.map((t) => {
+  const ci = coolantInfo(t.coolant);
+  const pct = v(t.percentage, null);
+  return buildToolCard(
+    v(t.number, "?"),
+    toolTitle(t),
+    mm(t.diameter),
+    mm(t.corner_radius),
+    mm(t.length),
+    v(t.flutes, "—"),
+    v(t.holder_full, v(t.holder, "—")),
+    ci.text,
+    ci.color,
+    v(t.cycle_time, "—"),
+    pct || "—",
+  );
+});
 
 const GAP_W = 260;
 const CARD_OUTER_W = Math.floor((CONTENT_W - GAP_W) / 2); // 7723
@@ -299,14 +407,32 @@ function cardCell(cardTable, isRight) {
 
 const gapCellWidthAdj = CONTENT_W - 2 * CARD_OUTER_W; // small leftover used as spacing built into margins above
 
+// Celda vacía para completar la rejilla cuando hay un número impar de
+// herramientas (mantiene la maquetación a 2 columnas).
+function emptyCardCell(isRight) {
+  return new TableCell({
+    width: { size: CARD_OUTER_W, type: WidthType.DXA },
+    borders: noBorders(),
+    margins: { top: 0, bottom: 200, left: isRight ? 130 : 0, right: isRight ? 0 : 130 },
+    children: [new Paragraph({ text: "" })],
+  });
+}
+
+const gridRows = [];
+for (let i = 0; i < cards.length; i += 2) {
+  gridRows.push(new TableRow({
+    children: [
+      cardCell(cards[i], false),
+      cards[i + 1] ? cardCell(cards[i + 1], true) : emptyCardCell(true),
+    ],
+  }));
+}
+
 const herramientasGrid = new Table({
   width: { size: CONTENT_W, type: WidthType.DXA },
   columnWidths: [CARD_OUTER_W, CARD_OUTER_W],
   borders: noBorders(),
-  rows: [
-    new TableRow({ children: [cardCell(cards[0], false), cardCell(cards[1], true)] }),
-    new TableRow({ children: [cardCell(cards[2], false), cardCell(cards[3], true)] }),
-  ],
+  rows: gridRows,
 });
 
 // ---------- NOTA REFRIGERACIÓN ----------
@@ -343,18 +469,31 @@ function opRow(n, desc, estrategia, hta, refrig, refrigColor, fill, rpm, avance,
   });
 }
 
+const OPS_FALLBACK = [
+  { number: 1, description: "DESB ZONA SUPERIOR", strategy: "Festoneado", tool: "T1", coolant: "Fluido", rpm: "2918", feedrate: "500", z_max: "15", z_min: "-15.54", cycle_time: "2h 13m 13s" },
+];
+
+const operations = (Array.isArray(D.operations) && D.operations.length) ? D.operations : OPS_FALLBACK;
+
 const opRows = [
   opHeaderRow,
-  opRow(1, "DESB ZONA SUPERIOR", "Festoneado", "T1", "Fluido", NAVY, "FFFFFF", "2918", "500", "15", "-15.54", "2h 13m 13s"),
-  opRow(2, "DESB RADIO SUP PENDIENTE", "Fusión", "T1", "Fluido", NAVY, LIGHTGREY, "2918", "636.62", "12", "-23.59", "15m 28s"),
-  opRow(3, "DESB ZONA INFERIOR", "Festoneado", "T1", "Fluido", NAVY, "FFFFFF", "2918", "3676.479", "15", "-83.28", "10m 30s"),
-  opRow(4, "DESB RAMPA HLARGA BOLA R6", "Rampa", "T2", "Desactivado", REDWARN, LIGHTGREY, "2785", "626.673", "15", "-75.8", "1h 48m 17s"),
-  opRow(5, "DESB RADIO INFERIOR HLARGA", "Fusión", "T2", "Desactivado", REDWARN, "FFFFFF", "2918", "551.472", "12", "-81.06", "11m 11s"),
-  opRow(6, "ACAB ZONA SUPERIOR", "Festoneado", "T4", "Fluido", NAVY, LIGHTGREY, "2918", "550", "15", "-15.69", "5h 34m 47s"),
-  opRow(7, "ACAB RADIO SUP PENDIENTE", "Fusión", "T4", "Fluido", NAVY, "FFFFFF", "2918", "500", "12", "-23.59", "1h 12m 17s"),
-  opRow(8, "ACAB ZONA INFERIOR", "Festoneado", "T4", "Fluido", NAVY, LIGHTGREY, "2918", "550", "15", "-83.45", "4h 33m 22s"),
-  opRow(9, "ACAB RAMPA HLARGA BOLA R6", "Rampa", "T3", "Desactivado", REDWARN, "FFFFFF", "2918", "500", "15", "-74.8", "2h 49m 9s"),
-  opRow(10, "ACAB RADIO INFERIOR HLARGA", "Fusión", "T3", "Desactivado", REDWARN, LIGHTGREY, "2918", "500", "12", "-81.21", "53m 0s"),
+  ...operations.map((op, i) => {
+    const ci = coolantInfo(op.coolant);
+    return opRow(
+      v(op.number, i + 1),
+      v(op.description, "—"),
+      v(op.strategy, "—"),
+      v(op.tool, "—"),
+      v(op.coolant, "Desactivado"),
+      ci.color,
+      i % 2 === 0 ? "FFFFFF" : LIGHTGREY,
+      v(op.rpm, "—"),
+      v(op.feedrate, "—"),
+      v(op.z_max, "—"),
+      v(op.z_min, "—"),
+      v(op.cycle_time, "—"),
+    );
+  }),
 ];
 
 const operacionesTable = new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: opCols, rows: opRows });
@@ -362,7 +501,13 @@ const operacionesTable = new Table({ width: { size: CONTENT_W, type: WidthType.D
 // ---------- GRÁFICO DE BARRAS: DISTRIBUCIÓN DE TIEMPO POR HERRAMIENTA ----------
 const BAR_LABEL_W = 3200;
 const BAR_AREA_W = CONTENT_W - BAR_LABEL_W; // 12506
-const BAR_MAX_PCT = 60; // headroom above the largest real value (57.6%)
+// Escala del eje: múltiplo de 10 justo por encima del mayor porcentaje real,
+// para que la barra más larga no toque el borde.
+const pctOf = (t) => {
+  const n = parseFloat(String(v(t.percentage, "0")).replace("%", "").replace(",", "."));
+  return isNaN(n) ? 0 : n;
+};
+const BAR_MAX_PCT = Math.max(10, Math.ceil((Math.max(...tools.map(pctOf)) * 1.05) / 10) * 10);
 
 function barRow(label, pct, color) {
   const fillW = Math.round((pct / BAR_MAX_PCT) * BAR_AREA_W);
@@ -394,16 +539,21 @@ function barRow(label, pct, color) {
   });
 }
 
+// '3h 2m 56s' → '3h 2m' (los segundos no aportan en la etiqueta de la barra)
+const shortTime = (t) => v(t, "—").replace(/\s*\d+s$/, "") || v(t, "—");
+
+function barLabel(t) {
+  const ci = coolantInfo(t.coolant);
+  let name = toolTitle(t).replace(/^bullnose\s+end\s*mill\s*/i, "").trim() || toolTitle(t);
+  if (name.length > 26) name = name.slice(0, 25).trim() + "…";
+  return `${v(t.label, "T" + v(t.number, "?"))} · ${name} (${ci.dry ? "seco" : "húmedo"}) — ${shortTime(t.cycle_time)}`;
+}
+
 const distribucionTiempoTable = new Table({
   width: { size: CONTENT_W, type: WidthType.DXA },
   columnWidths: [BAR_LABEL_W, BAR_AREA_W],
   borders: noBorders(),
-  rows: [
-    barRow("T1 · Corta (húmedo) — 2h 39m", 13.5, NAVY),
-    barRow("T2 · Larga desbaste (seco) — 1h 59m", 10.1, REDWARN),
-    barRow("T3 · Larga acabado (seco) — 3h 42m", 18.8, REDWARN),
-    barRow("T4 · Corta acabado (húmedo) — 11h 20m", 57.6, NAVY),
-  ],
+  rows: tools.map((t) => barRow(barLabel(t), pctOf(t), coolantInfo(t.coolant).dry ? REDWARN : NAVY)),
 });
 
 // ---------- FOOTER ----------
