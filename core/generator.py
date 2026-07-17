@@ -15,6 +15,10 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from PIL import UnidentifiedImageError
+
+from core import images
+
 ROOT_DIR = Path(__file__).resolve().parent.parent
 GENERATORS_DIR = ROOT_DIR / "generators"
 NODE_MODULES = ROOT_DIR / "node_modules"
@@ -66,13 +70,16 @@ def ensure_node_modules():
     return True, "Dependencias Node instaladas"
 
 
-def generate_document(doc_type, data, client_name, material, programmer, extra=None):
+def generate_document(doc_type, data, client_name, material, programmer,
+                      extra=None, tool_images=None):
     """Ejecuta el script Node.js correspondiente y devuelve el documento.
 
     Devuelve (docx_bytes, filename, None) en éxito o (None, None, error).
     Los datos del proyecto se exponen al script vía el archivo JSON apuntado
     por la variable de entorno GENERATOR_DATA. ``extra`` son los campos que
-    no vienen en el export de Fusion (máquina, variante, revisión…).
+    no vienen en el export de Fusion (máquina, variante, revisión…) y
+    ``tool_images`` un dict {etiqueta de herramienta: bytes de imagen} con los
+    renders que el usuario haya pegado.
     """
     entry = SCRIPT_MAP.get(doc_type)
     if not entry:
@@ -86,6 +93,7 @@ def generate_document(doc_type, data, client_name, material, programmer, extra=N
     temp_data_file = tempfile.NamedTemporaryFile(
         mode='w', suffix='.json', delete=False, encoding='utf-8')
     temp_img_path = None
+    tool_img_paths = []
     try:
         payload = {k: v for k, v in data.items() if k != 'pieza_image_base64'}
         payload.update({
@@ -94,6 +102,28 @@ def generate_document(doc_type, data, client_name, material, programmer, extra=N
             'programmer': programmer,
         })
         payload.update(extra or {})
+
+        # Renders de herramienta: se reescalan aquí para que su tamaño
+        # original no pueda descuadrar la tarjeta, y se pasan ya medidos.
+        if tool_images:
+            tools = [dict(t) for t in (payload.get('tools') or [])]
+            box_w, box_h = images.box_for(len(tools))
+            for tool in tools:
+                raw = tool_images.get(tool.get('label'))
+                if not raw:
+                    continue
+                try:
+                    png, w, h = images.prepare(raw, box_w, box_h)
+                    tmp = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+                    tmp.write(png)
+                    tmp.close()
+                    tool_img_paths.append(tmp.name)
+                    tool['image_path'] = tmp.name
+                    tool['image_w'] = w
+                    tool['image_h'] = h
+                except (OSError, ValueError, UnidentifiedImageError):
+                    pass  # imagen ilegible: la tarjeta mantiene su texto
+            payload['tools'] = tools
 
         # El render de la pieza viaja incrustado en el HTML; los scripts Node
         # necesitan un archivo en disco.
@@ -139,7 +169,7 @@ def generate_document(doc_type, data, client_name, material, programmer, extra=N
     except Exception as e:  # noqa: BLE001 — el error se muestra en la UI
         return None, None, f"Error durante generación: {e}"
     finally:
-        for path in (temp_data_file.name, temp_img_path):
+        for path in [temp_data_file.name, temp_img_path, *tool_img_paths]:
             if path:
                 try:
                     os.unlink(path)

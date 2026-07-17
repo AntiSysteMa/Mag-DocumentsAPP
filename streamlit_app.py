@@ -6,11 +6,14 @@ los scripts Node.js originales (generators/build4.js … build8.js).
 """
 
 import base64
+import io
 import time
 from datetime import datetime
 
 import streamlit as st
+from streamlit_paste_button import paste_image_button
 
+from core.images import box_for, thumbnail
 from core.generator import (
     DOC_DESCRIPTIONS,
     SCRIPT_MAP,
@@ -45,6 +48,10 @@ render_header()
 
 if 'history' not in st.session_state:
     st.session_state['history'] = []
+
+# Renders pegados por el usuario: {etiqueta de herramienta: bytes PNG}
+if 'tool_images' not in st.session_state:
+    st.session_state['tool_images'] = {}
 
 # Bootstrap de dependencias Node (necesario la primera vez en Streamlit Cloud)
 if 'node_checked' not in st.session_state:
@@ -164,6 +171,9 @@ with tab1:
             if st.session_state.get('source_file') != uploaded_file.name:
                 st.session_state['edited_data'] = dict(data)
                 st.session_state['source_file'] = uploaded_file.name
+                # Otro proyecto tiene otras herramientas: los renders del
+                # anterior ya no corresponden.
+                st.session_state['tool_images'] = {}
             st.session_state['fusion_data'] = data
             st.session_state['html_content'] = html_content
 
@@ -243,6 +253,42 @@ with tab2:
                 st.caption("El Setup Sheet no incluye imagen de la pieza.")
 
         tools = data.get('tools') or []
+        if tools:
+            st.markdown("#### 📸 Renders de herramienta")
+            box_w, box_h = box_for(len(tools))
+            st.caption(
+                f"Captura el utillaje en Fusion 360 (Win+Shift+S) y pégalo con "
+                f"Ctrl+V en la herramienta que corresponda. La imagen sustituye "
+                f"al texto «PEGAR RENDER» en la tarjeta del documento y se "
+                f"reescala sola a {box_w}×{box_h} px, así que no descuadra la "
+                f"tabla ni parte la sección en dos páginas."
+            )
+            img_cols = st.columns(min(len(tools), 4))
+            for i, tool in enumerate(tools):
+                label = tool.get('label') or f"T{i + 1}"
+                with img_cols[i % len(img_cols)]:
+                    st.markdown(f"**{label}** · {(tool.get('description') or '')[:28]}")
+                    pasted = paste_image_button(
+                        label=f"📋 Pegar render {label}",
+                        key=f"paste_{label}",
+                        errors="ignore",
+                    )
+                    if pasted is not None and getattr(pasted, 'image_data', None) is not None:
+                        buf = io.BytesIO()
+                        pasted.image_data.save(buf, format="PNG")
+                        st.session_state['tool_images'][label] = buf.getvalue()
+
+                    current = st.session_state['tool_images'].get(label)
+                    if current:
+                        st.image(thumbnail(current), use_container_width=True)
+                        if st.button("🗑️ Quitar", key=f"del_{label}",
+                                     use_container_width=True):
+                            del st.session_state['tool_images'][label]
+                            st.rerun()
+                    else:
+                        st.caption("Sin render · la tarjeta mantendrá el texto")
+            st.markdown("---")
+
         with st.expander(f"🧰 Herramientas detectadas ({len(tools)})", expanded=bool(tools)):
             if tools:
                 st.dataframe(
@@ -308,6 +354,16 @@ with tab3:
 | **Tiempo de ciclo** | {edited.get('cycle_time') or '—'} |
 """
             )
+            n_tools = len(edited.get('tools') or [])
+            n_imgs = len(st.session_state['tool_images'])
+            if n_tools:
+                if n_imgs == n_tools:
+                    st.caption(f"📸 {n_imgs}/{n_tools} renders de herramienta pegados.")
+                else:
+                    st.caption(
+                        f"📸 {n_imgs}/{n_tools} renders pegados · las herramientas "
+                        f"sin render mantendrán el texto «PEGAR RENDER»."
+                    )
         with col2:
             st.markdown("#### Estado")
             all_ok = client_ok and material_ok and programmer_ok
@@ -350,6 +406,7 @@ with tab3:
                     'variant': variant,
                     'revision': revision,
                 },
+                tool_images=st.session_state['tool_images'],
             )
             progress.progress(90, text="Finalizando…")
             time.sleep(0.15)

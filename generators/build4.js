@@ -290,7 +290,37 @@ function specLine(label, value, opts = {}) {
   });
 }
 
-function buildToolCard(n, tipo, diam, resq, long, flutes, soporte, refrig, refrigColor, tiempo, pct) {
+// Contenido de la celda de imagen de la tarjeta: el render pegado por el
+// usuario si lo hay, y si no el hueco con la indicación de pegarlo. La app ya
+// reescala la imagen y envía sus medidas, así que aquí solo se coloca.
+function toolImageContent(n, tool) {
+  if (tool && tool.image_path && fs.existsSync(tool.image_path)) {
+    try {
+      return [new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new ImageRun({
+          type: "png",
+          data: fs.readFileSync(tool.image_path),
+          transformation: {
+            width: Number(tool.image_w) || 150,
+            height: Number(tool.image_h) || 110,
+          },
+        })],
+      })];
+    } catch (e) {
+      console.error(`Render de T${n} ilegible:`, e.message);
+    }
+  }
+  return [
+    new Paragraph({ text: "" }), new Paragraph({ text: "" }),
+    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "PEGAR RENDER", italics: true, size: FS_FOOTSMALL + 2, font: "Arial", color: "8A94A0" })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Fusion 360 › Utillaje", italics: true, size: FS_FOOTSMALL + 2, font: "Arial", color: "8A94A0" })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `T${n} + cono`, italics: true, size: FS_FOOTSMALL + 2, font: "Arial", color: "8A94A0" })] }),
+    new Paragraph({ text: "" }), new Paragraph({ text: "" }),
+  ];
+}
+
+function buildToolCard(n, tipo, diam, resq, long, flutes, soporte, refrig, refrigColor, tiempo, pct, tool) {
   const bannerColor = refrigColor === REDWARN ? REDWARN : NAVY;
   const CARD_IMG_W = 2450;
   const CARD_SPEC_W = 15706 / 2 - CARD_IMG_W - 260; // half content width minus image and gap, approx per card in 2-col outer grid (adjusted later)
@@ -316,13 +346,7 @@ function buildToolCard(n, tipo, diam, resq, long, flutes, soporte, refrig, refri
             shading: { type: ShadingType.CLEAR, color: "auto", fill: CARDGREY },
             borders: cellBorders({ top: noBorder, bottom: noBorder, left: noBorder, right: dashedBorder }),
             margins: { top: 100, bottom: 100, left: 80, right: 80 },
-            children: [
-              new Paragraph({ text: "" }), new Paragraph({ text: "" }),
-              new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "PEGAR RENDER", italics: true, size: FS_FOOTSMALL + 2, font: "Arial", color: "8A94A0" })] }),
-              new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Fusion 360 › Utillaje", italics: true, size: FS_FOOTSMALL + 2, font: "Arial", color: "8A94A0" })] }),
-              new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `T${n} + cono`, italics: true, size: FS_FOOTSMALL + 2, font: "Arial", color: "8A94A0" })] }),
-              new Paragraph({ text: "" }), new Paragraph({ text: "" }),
-            ],
+            children: toolImageContent(n, tool),
           }),
           new TableCell({
             width: { size: CARD_SPEC_W, type: WidthType.DXA },
@@ -390,6 +414,7 @@ const cards = tools.map((t) => {
     ci.color,
     v(t.cycle_time, "—"),
     pct || "—",
+    t,
   );
 });
 
