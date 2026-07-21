@@ -12,6 +12,7 @@ documento listo para imprimir o enviar.
 | Calidad | `generators/build6.js` | Plantilla de reporte de control de calidad |
 | One-Pager | `generators/build7.js` | Propuesta de valor en una página |
 | Infografía | `generators/build8.js` | Infografía del proceso productivo |
+| Hoja G54 | `generators/build_g54.js` | Hoja de punto cero / origen G54 (formulario manual) |
 
 Los documentos se generan con **Node.js + [docx](https://www.npmjs.com/package/docx)**;
 la interfaz y la extracción de datos son **Python + Streamlit + BeautifulSoup**.
@@ -82,6 +83,16 @@ el tipo elegido en la barra lateral.
 | **Propuesta** | Formulario manual en «Revisar y Editar» | Precio, alcance y plazos son criterio comercial; Fusion 360 no los tiene |
 | **Calidad** | Solo cabecera automática (cliente/pieza/material) | El resto —mediciones, resultado— se rellena a mano en el Word tras la inspección física |
 | **One-Pager** / **Infografía** | Ninguno — plantilla fija | Son folletos de empresa, no de proyecto; se descargan siempre iguales |
+| **Hoja G54** | Formulario manual en «Revisar y Editar» | No usa Setup Sheet: campos variables (pieza, fase, programa, bruto, operario) + fijos precargados + texto de origen G54 editable |
+
+### Presets y memoria de último uso
+
+- **Presets de material** (barra lateral): «D2 62HRC Estándar», «Aluminio 7075» y
+  «Custom» autocompletan material, dureza y máquina de una vez.
+- **Memoria de último uso**: al generar, la app recuerda los datos del proyecto
+  (cliente, referencia, programador…) en **Supabase** y los precarga en la
+  siguiente sesión, también desde otro dispositivo. Si no hay conexión con
+  Supabase, la app funciona igual pero sin recordar entre sesiones.
 
 Campos del JSON por documento:
 
@@ -102,16 +113,31 @@ El repositorio ya incluye todo lo necesario:
 
 Pasos:
 
-1. Sube el repositorio a GitHub (público o privado).
+1. Sube el repositorio a GitHub (**privado** — contiene datos reales de clientes).
 2. Entra en [share.streamlit.io](https://share.streamlit.io) con tu cuenta de GitHub.
 3. **New app** → elige el repositorio, rama `main` y archivo `streamlit_app.py`.
-4. **Deploy**. El primer arranque tarda un poco más (instala nodejs + npm install).
+4. **Advanced settings → Secrets**: pega la configuración de Supabase (ver abajo).
+5. **Deploy**. El primer arranque tarda un poco más (instala nodejs + npm install).
 
-### Variables de entorno
+### Secretos (Supabase)
 
-La app **no necesita variables de entorno ni secretos** para funcionar.
-Internamente usa `GENERATOR_DATA` (la fija la propia app en cada generación;
-no hay que configurarla).
+La memoria de último uso usa Supabase. Las credenciales se guardan como
+**secretos**, nunca en el código (`.streamlit/secrets.toml` está en `.gitignore`).
+
+En Streamlit Community Cloud: **Manage app → Settings → Secrets**, y pega:
+
+```toml
+[supabase]
+url = "https://TU-PROYECTO.supabase.co"
+key = "sb_publishable_..."
+```
+
+La clave `key` es la **publishable** de Supabase (Project Settings → API Keys),
+segura para el cliente. Sin estos secretos la app arranca igual, pero no
+recuerda los valores entre sesiones (usa solo la sesión actual).
+
+> `GENERATOR_DATA` es interna (la fija la propia app en cada generación); no hay
+> que configurarla.
 
 ## 🧩 Solución de problemas
 
