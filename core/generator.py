@@ -30,6 +30,7 @@ SCRIPT_MAP = {
     'CALIDAD': ('build6.js', 'Reporte_Control_Calidad_MAG_Industries_PLANTILLA.docx'),
     'ONE-PAGER': ('build7.js', 'OnePager_Propuesta_Valor_MAG_Industries.docx'),
     'INFOGRAFÍA': ('build8.js', 'Infografia_Proceso_MAG_Industries.docx'),
+    'HOJA G54': ('build_g54.js', 'Hoja_Punto_Cero_G54_MAG_Industries_PLANTILLA.docx'),
 }
 
 DOC_DESCRIPTIONS = {
@@ -38,6 +39,7 @@ DOC_DESCRIPTIONS = {
     'CALIDAD': 'Plantilla de reporte de control de calidad dimensional.',
     'ONE-PAGER': 'Resumen de propuesta de valor en una página, con iconografía y contacto.',
     'INFOGRAFÍA': 'Infografía del proceso productivo de principio a fin.',
+    'HOJA G54': 'Hoja de punto cero / origen G54: formulario manual, sin Setup Sheet.',
 }
 
 

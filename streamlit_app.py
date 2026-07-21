@@ -44,6 +44,25 @@ st.set_page_config(
 inject_theme()
 render_header()
 
+# Método de origen G54 aprobado: default editable del formulario. Debe
+# coincidir con el ORIGIN_DEFAULT de generators/build_g54.js.
+G54_ORIGIN_DEFAULT = (
+    "Eje X (centro de la pieza): Palpar las dos caras laterales opuestas en el "
+    "eje X y establecer el cero en el punto medio entre ambas. El origen X queda "
+    "en el centro geométrico de la pieza final.\n\n"
+    "Eje Y (centro de la pieza): Palpar los cantos opuestos (superior e inferior) "
+    "en el eje Y y establecer el cero en el punto medio. El origen Y queda en el "
+    "centro geométrico de la pieza final.\n\n"
+    "Eje Z (base de la pieza): Establecer el cero en la cara inferior de la pieza "
+    "final (Z mínimo). Verificar con una altura o distancia medible y conocida, de "
+    "modo que el cero sea comprobable y trazable para mantener las tolerancias bajo "
+    "control.\n\n"
+    "Verificación con comparador de carátula: Antes de mecanizar, comprobar el "
+    "origen en X e Y apoyándose en referencias verificables —agujeros de referencia "
+    "o caras perfectamente paralelas— usando el comparador de carátula. Confirmar "
+    "que la desviación esté dentro de tolerancia antes de dar inicio al programa."
+)
+
 # ============== Estado de sesión ==============
 
 if 'history' not in st.session_state:
@@ -106,7 +125,7 @@ with st.sidebar:
     # Propuesta y Calidad no dependen del Setup Sheet de Fusion 360, así que
     # necesitan la referencia de la pieza como campo propio (se autocompleta
     # si ya se subió un Setup Sheet en esta sesión).
-    if doc_type in ("PROPUESTA", "CALIDAD"):
+    if doc_type in ("PROPUESTA", "CALIDAD", "HOJA G54"):
         project_ref = st.text_input(
             "Pieza / Referencia",
             key="project_ref_field",
@@ -442,6 +461,47 @@ with tab2:
             f"**{project_ref or '[referencia]'}** · **{material or '[material]'}**"
         )
 
+    elif doc_type == "HOJA G54":
+        st.subheader("2 · Datos de la Hoja de Punto Cero (G54)")
+        st.caption(
+            "Cliente, referencia y programador se toman de la barra lateral. "
+            "Rellena aquí lo específico de esta pieza. Los campos fijos vienen "
+            "precargados: cámbialos solo si esta pieza es distinta."
+        )
+
+        st.markdown("**Datos variables de la pieza**")
+        c1, c2 = st.columns(2)
+        with c1:
+            g54_phase = st.text_input(
+                "Fase / Operación", placeholder="Ej.: Fase 2 — Acabado")
+            g54_program = st.text_input(
+                "Programa CNC (O-xxxx)", placeholder="Ej.: O-1042 / acabado.nc")
+        with c2:
+            g54_stock = st.text_input(
+                "Bruto (X x Y x Z, mm)", placeholder="Ej.: 120 x 80 x 40 mm")
+            g54_operator = st.text_input(
+                "Operario ejecutor", placeholder="Ej.: J. Parente")
+
+        st.markdown("**Campos fijos (precargados · edítalos si cambian)**")
+        f1, f2 = st.columns(2)
+        with f1:
+            g54_material = st.text_input("Material", value="D2")
+        with f2:
+            g54_hardness = st.text_input("Dureza", value="62 HRC")
+        st.caption(
+            f"Máquina y postprocesador se toman de «🛠️ Máquina y documento» "
+            f"(barra lateral): **{machine or '—'}** · **{postprocessor or '—'}**."
+        )
+
+        st.markdown("**Método de establecimiento del origen G54**")
+        g54_origin = st.text_area(
+            "Texto que se imprime en el documento (editable)",
+            value=G54_ORIGIN_DEFAULT,
+            height=280,
+            help="Este texto se inyecta tal cual en la hoja. Ajústalo si esta "
+                 "pieza requiere un método de palpado distinto.",
+        )
+
     else:  # ONE-PAGER, INFOGRAFÍA
         st.subheader("2 · Sin datos que revisar")
         st.info(
@@ -492,6 +552,21 @@ with tab3:
             extra = {
                 'project_ref': project_ref,
                 'inspection_date': qc_inspection_date,
+                'revision': revision,
+            }
+        elif doc_type == "HOJA G54":
+            edited = {}
+            extra = {
+                'project_ref': project_ref,
+                'phase_op': g54_phase,
+                'cnc_program': g54_program,
+                'stock_dims': g54_stock,
+                'operator': g54_operator,
+                'machine': machine,
+                'postprocessor': postprocessor,
+                'material': g54_material,
+                'hardness': g54_hardness,
+                'origin_text': g54_origin,
                 'revision': revision,
             }
         else:  # ONE-PAGER, INFOGRAFÍA: folletos fijos, sin datos de proyecto
@@ -546,6 +621,19 @@ with tab3:
 | **Pieza / Referencia** | {project_ref or '—'} |
 | **Material** | {material or '—'} |
 | **Fecha inspección** | {qc_inspection_date or '—'} |
+"""
+                )
+            elif doc_type == "HOJA G54":
+                st.markdown(
+                    f"""
+| | |
+|---|---|
+| **Documento** | {doc_type} |
+| **Cliente** | {client_name or '—'} |
+| **Pieza / Referencia** | {project_ref or '—'} |
+| **Fase / Operación** | {g54_phase or '—'} |
+| **Programa CNC** | {g54_program or '—'} |
+| **Material / Dureza** | {(g54_material + ' · ' + g54_hardness) if g54_material else '—'} |
 """
                 )
             else:
