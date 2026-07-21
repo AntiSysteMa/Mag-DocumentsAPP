@@ -23,6 +23,8 @@ from core.generator import (
     node_ready,
 )
 from core.parser import EDITABLE_FIELDS, extract_fusion_data
+from core.presets import PRESETS, PRESET_NAMES
+from core import memory
 from ui.components import (
     inject_theme,
     render_dashboard,
@@ -72,6 +74,42 @@ if 'history' not in st.session_state:
 if 'tool_images' not in st.session_state:
     st.session_state['tool_images'] = {}
 
+# Valores por defecto de los campos con estado (presets y memoria escriben
+# sobre estas claves antes de crear los widgets).
+FIELD_DEFAULTS = {
+    'client_field': '',
+    'material_field': '',
+    'programmer_field': '',
+    'machine_field': 'HAAS VF-2 (3 ejes)',
+    'postprocessor_field': 'HAAS Next Generation',
+    'variant_field': '',
+    'revision_field': '00',
+    'g54_phase_field': '',
+    'g54_program_field': '',
+    'g54_stock_field': '',
+    'g54_operator_field': '',
+    'g54_material_field': 'D2',
+    'g54_hardness_field': '62 HRC',
+}
+for _k, _dv in FIELD_DEFAULTS.items():
+    st.session_state.setdefault(_k, _dv)
+
+# Campos que la memoria de último uso precarga (clave de widget → clave en la
+# memoria). Los campos fijos (material/dureza/máquina) los gobiernan los
+# presets, así que la memoria solo precarga los variables del proyecto.
+MEMORY_FIELDS = {
+    'client_field': 'client_name',
+    'programmer_field': 'programmer',
+    'project_ref_field': 'project_ref',
+    'g54_phase_field': 'phase_op',
+    'g54_program_field': 'cnc_program',
+    'g54_stock_field': 'stock_dims',
+    'g54_operator_field': 'operator',
+}
+
+if 'memory_loaded_for' not in st.session_state:
+    st.session_state['memory_loaded_for'] = None
+
 # Bootstrap de dependencias Node (necesario la primera vez en Streamlit Cloud)
 if 'node_checked' not in st.session_state:
     if find_node() and not node_ready():
@@ -91,6 +129,37 @@ with st.sidebar:
     )
     st.caption(DOC_DESCRIPTIONS.get(doc_type, ""))
 
+    # --- Memoria de último uso: precargar al cambiar de tipo de documento ---
+    if st.session_state['memory_loaded_for'] != doc_type:
+        remembered = memory.load(doc_type)
+        for field_key, mem_key in MEMORY_FIELDS.items():
+            if remembered.get(mem_key):
+                st.session_state[field_key] = remembered[mem_key]
+        st.session_state['memory_loaded_for'] = doc_type
+
+    # --- Preset de material ---
+    preset = st.selectbox(
+        "Preset de material",
+        PRESET_NAMES,
+        key="preset",
+        help="Autocompleta material, dureza y máquina. Elige «Custom» para "
+             "rellenar todo a mano.",
+    )
+    # Aplicar el preset solo cuando cambia, para no pisar ediciones manuales.
+    if st.session_state.get('_applied_preset') != preset:
+        vals = PRESETS.get(preset) or {}
+        if vals:  # «Custom» no fuerza nada
+            st.session_state['material_field'] = vals.get('material', '')
+            st.session_state['machine_field'] = vals.get('machine', 'HAAS VF-2 (3 ejes)')
+            st.session_state['g54_material_field'] = vals.get('material', 'D2')
+            st.session_state['g54_hardness_field'] = vals.get('hardness', '62 HRC')
+        st.session_state['_applied_preset'] = preset
+
+    if memory.available():
+        st.caption("🟢 Memoria sincronizada (se recuerda tu último uso).")
+    else:
+        st.caption("⚪ Memoria solo en esta sesión (sin conexión a Supabase).")
+
     st.markdown("---")
     st.markdown("**Datos del proyecto**")
 
@@ -100,7 +169,7 @@ with st.sidebar:
 
     client_name = st.text_input(
         "Nombre del cliente",
-        value="",
+        key="client_field",
         placeholder="Ej.: Talleres Norte S.A.",
         help="Aparecerá como destinatario del documento.",
     )
@@ -108,7 +177,7 @@ with st.sidebar:
 
     material = st.text_input(
         "Material / Dureza",
-        value="",
+        key="material_field",
         placeholder="Ej.: Aluminio 7075-T6",
         help="Material de la pieza y su dureza. Fusion 360 no lo incluye en el export, complétalo aquí.",
     )
@@ -116,7 +185,7 @@ with st.sidebar:
 
     programmer = st.text_input(
         "Programador / Responsable",
-        value="",
+        key="programmer_field",
         placeholder="Ej.: A. Torres",
         help="Responsable del programa CAM y del documento.",
     )
@@ -139,17 +208,17 @@ with st.sidebar:
     with st.expander("🛠️ Máquina y documento"):
         st.caption("Estos datos no vienen en el export de Fusion 360.")
         machine = st.text_input(
-            "Máquina", value="HAAS VF-2 (3 ejes)",
+            "Máquina", key="machine_field",
             help="Máquina donde se ejecuta el programa.")
         postprocessor = st.text_input(
-            "Postprocesador", value="HAAS Next Generation",
+            "Postprocesador", key="postprocessor_field",
             help="Postprocesador usado al generar el código CNC.")
         variant = st.text_input(
-            "Variante de la pieza", value="",
+            "Variante de la pieza", key="variant_field",
             placeholder="Ej.: REPARADA",
             help="Etiqueta entre paréntesis tras la referencia. Déjalo vacío para omitirla.")
         revision = st.text_input(
-            "Revisión", value="00",
+            "Revisión", key="revision_field",
             help="Revisión del documento; forma parte del Nº de documento.")
 
     st.markdown("---")
@@ -473,21 +542,25 @@ with tab2:
         c1, c2 = st.columns(2)
         with c1:
             g54_phase = st.text_input(
-                "Fase / Operación", placeholder="Ej.: Fase 2 — Acabado")
+                "Fase / Operación", key="g54_phase_field",
+                placeholder="Ej.: Fase 2 — Acabado")
             g54_program = st.text_input(
-                "Programa CNC (O-xxxx)", placeholder="Ej.: O-1042 / acabado.nc")
+                "Programa CNC (O-xxxx)", key="g54_program_field",
+                placeholder="Ej.: O-1042 / acabado.nc")
         with c2:
             g54_stock = st.text_input(
-                "Bruto (X x Y x Z, mm)", placeholder="Ej.: 120 x 80 x 40 mm")
+                "Bruto (X x Y x Z, mm)", key="g54_stock_field",
+                placeholder="Ej.: 120 x 80 x 40 mm")
             g54_operator = st.text_input(
-                "Operario ejecutor", placeholder="Ej.: J. Parente")
+                "Operario ejecutor", key="g54_operator_field",
+                placeholder="Ej.: J. Parente")
 
         st.markdown("**Campos fijos (precargados · edítalos si cambian)**")
         f1, f2 = st.columns(2)
         with f1:
-            g54_material = st.text_input("Material", value="D2")
+            g54_material = st.text_input("Material", key="g54_material_field")
         with f2:
-            g54_hardness = st.text_input("Dureza", value="62 HRC")
+            g54_hardness = st.text_input("Dureza", key="g54_hardness_field")
         st.caption(
             f"Máquina y postprocesador se toman de «🛠️ Máquina y documento» "
             f"(barra lateral): **{machine or '—'}** · **{postprocessor or '—'}**."
@@ -693,6 +766,23 @@ with tab3:
                     'bytes': docx_bytes,
                     'timestamp': datetime.now().strftime("%H:%M:%S"),
                 })
+
+                # Memoria de último uso: recordar los valores del proyecto para
+                # precargarlos la próxima vez (también desde otro dispositivo).
+                mem_payload = {
+                    'client_name': client_name,
+                    'programmer': programmer,
+                    'project_ref': project_ref,
+                }
+                if doc_type == "HOJA G54":
+                    mem_payload.update({
+                        'phase_op': g54_phase,
+                        'cnc_program': g54_program,
+                        'stock_dims': g54_stock,
+                        'operator': g54_operator,
+                    })
+                memory.save(doc_type, mem_payload)
+
                 st.success(f"✅ Documento generado: **{filename}** "
                            f"({len(docx_bytes) / 1024:.0f} KB)")
                 st.balloons()
