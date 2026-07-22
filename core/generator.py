@@ -73,15 +73,17 @@ def ensure_node_modules():
 
 
 def generate_document(doc_type, data, client_name, material, programmer,
-                      extra=None, tool_images=None):
+                      extra=None, tool_images=None, view_images=None):
     """Ejecuta el script Node.js correspondiente y devuelve el documento.
 
     Devuelve (docx_bytes, filename, None) en éxito o (None, None, error).
     Los datos del proyecto se exponen al script vía el archivo JSON apuntado
     por la variable de entorno GENERATOR_DATA. ``extra`` son los campos que
-    no vienen en el export de Fusion (máquina, variante, revisión…) y
+    no vienen en el export de Fusion (máquina, variante, revisión…),
     ``tool_images`` un dict {etiqueta de herramienta: bytes de imagen} con los
-    renders que el usuario haya pegado.
+    renders que el usuario haya pegado, y ``view_images`` un dict
+    {'frontal'|'superior'|'lateral'|'isometrica': bytes de imagen} con las
+    capturas de vista de la Hoja G54.
     """
     entry = SCRIPT_MAP.get(doc_type)
     if not entry:
@@ -96,6 +98,7 @@ def generate_document(doc_type, data, client_name, material, programmer,
         mode='w', suffix='.json', delete=False, encoding='utf-8')
     temp_img_path = None
     tool_img_paths = []
+    view_img_paths = []
     try:
         payload = {k: v for k, v in data.items() if k != 'pieza_image_base64'}
         payload.update({
@@ -126,6 +129,28 @@ def generate_document(doc_type, data, client_name, material, programmer,
                 except (OSError, ValueError, UnidentifiedImageError):
                     pass  # imagen ilegible: la tarjeta mantiene su texto
             payload['tools'] = tools
+
+        # Vistas de la Hoja G54 (frontal/superior/lateral/isométrica): se
+        # reescalan a la caja exacta de la celda de la tabla (ver
+        # core/images.py: box_for_g54_view) para que la imagen use el mayor
+        # tamaño posible sin descuadrar ni partir la tabla.
+        if view_images:
+            box_w, box_h = images.box_for_g54_view()
+            views_payload = {}
+            for key, raw in view_images.items():
+                if not raw:
+                    continue
+                try:
+                    png, w, h = images.prepare(raw, box_w, box_h)
+                    tmp = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+                    tmp.write(png)
+                    tmp.close()
+                    view_img_paths.append(tmp.name)
+                    views_payload[key] = {'path': tmp.name, 'w': w, 'h': h}
+                except (OSError, ValueError, UnidentifiedImageError):
+                    pass  # imagen ilegible: la vista mantiene su hueco
+            if views_payload:
+                payload['views'] = views_payload
 
         # El render de la pieza viaja incrustado en el HTML; los scripts Node
         # necesitan un archivo en disco.
@@ -171,7 +196,7 @@ def generate_document(doc_type, data, client_name, material, programmer,
     except Exception as e:  # noqa: BLE001 — el error se muestra en la UI
         return None, None, f"Error durante generación: {e}"
     finally:
-        for path in [temp_data_file.name, temp_img_path, *tool_img_paths]:
+        for path in [temp_data_file.name, temp_img_path, *tool_img_paths, *view_img_paths]:
             if path:
                 try:
                     os.unlink(path)

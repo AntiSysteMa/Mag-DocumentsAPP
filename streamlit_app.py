@@ -13,7 +13,7 @@ from datetime import datetime
 import streamlit as st
 from streamlit_paste_button import paste_image_button
 
-from core.images import box_for, thumbnail
+from core.images import box_for, box_for_g54_view, thumbnail
 from core.generator import (
     DOC_DESCRIPTIONS,
     SCRIPT_MAP,
@@ -73,6 +73,18 @@ if 'history' not in st.session_state:
 # Renders pegados por el usuario: {etiqueta de herramienta: bytes PNG}
 if 'tool_images' not in st.session_state:
     st.session_state['tool_images'] = {}
+
+# Capturas de vista pegadas para la Hoja G54: {'frontal'|'superior'|
+# 'lateral'|'isometrica': bytes PNG}
+if 'g54_view_images' not in st.session_state:
+    st.session_state['g54_view_images'] = {}
+
+G54_VIEWS = [
+    ('frontal', 'Vista Frontal (XZ)'),
+    ('superior', 'Vista Superior (XY) — Origen G54'),
+    ('lateral', 'Vista Lateral (YZ)'),
+    ('isometrica', 'Vista Isométrica — Sujeción'),
+]
 
 # Valores por defecto de los campos con estado (presets y memoria escriben
 # sobre estas claves antes de crear los widgets).
@@ -566,6 +578,38 @@ with tab2:
             f"(barra lateral): **{machine or '—'}** · **{postprocessor or '—'}**."
         )
 
+        st.markdown("**Vistas de la pieza**")
+        g54_box_w, g54_box_h = box_for_g54_view()
+        st.caption(
+            f"Captura cada vista en Fusion 360 (Win+Shift+S) y pégala con "
+            f"Ctrl+V en su recuadro. La imagen se reescala sola al tamaño "
+            f"más grande que cabe en la tabla (máx. {g54_box_w}×{g54_box_h} px) "
+            f"sin descuadrarla ni partirla entre páginas."
+        )
+        view_cols = st.columns(4)
+        for (view_key, view_label), col in zip(G54_VIEWS, view_cols):
+            with col:
+                st.markdown(f"**{view_label}**")
+                pasted_view = paste_image_button(
+                    label="📋 Pegar captura",
+                    key=f"paste_g54_{view_key}",
+                    errors="ignore",
+                )
+                if pasted_view is not None and getattr(pasted_view, 'image_data', None) is not None:
+                    buf = io.BytesIO()
+                    pasted_view.image_data.save(buf, format="PNG")
+                    st.session_state['g54_view_images'][view_key] = buf.getvalue()
+
+                current_view = st.session_state['g54_view_images'].get(view_key)
+                if current_view:
+                    st.image(thumbnail(current_view), use_container_width=True)
+                    if st.button("🗑️ Quitar", key=f"del_g54_{view_key}",
+                                 use_container_width=True):
+                        del st.session_state['g54_view_images'][view_key]
+                        st.rerun()
+                else:
+                    st.caption("Sin captura · queda el hueco de pegado")
+
         st.markdown("**Método de establecimiento del origen G54**")
         g54_origin = st.text_area(
             "Texto que se imprime en el documento (editable)",
@@ -592,6 +636,7 @@ with tab3:
     else:
         # Datos y extras propios de cada tipo de documento
         tool_images_arg = None
+        view_images_arg = None
         if doc_type == "FICHA TALLER":
             edited = st.session_state.get('edited_data', st.session_state['fusion_data'])
             extra = {
@@ -642,6 +687,7 @@ with tab3:
                 'origin_text': g54_origin,
                 'revision': revision,
             }
+            view_images_arg = st.session_state['g54_view_images']
         else:  # ONE-PAGER, INFOGRAFÍA: folletos fijos, sin datos de proyecto
             edited = {}
             extra = {}
@@ -709,6 +755,14 @@ with tab3:
 | **Material / Dureza** | {(g54_material + ' · ' + g54_hardness) if g54_material else '—'} |
 """
                 )
+                n_views = len(st.session_state['g54_view_images'])
+                if n_views == 4:
+                    st.caption("📸 4/4 vistas pegadas.")
+                else:
+                    st.caption(
+                        f"📸 {n_views}/4 vistas pegadas · las que falten mantendrán "
+                        f"el hueco «PEGAR CAPTURA FUSION 360»."
+                    )
             else:
                 st.markdown(f"| | |\n|---|---|\n| **Documento** | {doc_type} |\n")
                 st.caption("Folleto fijo de MAG Industries: no requiere datos de proyecto.")
@@ -750,6 +804,7 @@ with tab3:
                 programmer,
                 extra=extra,
                 tool_images=tool_images_arg,
+                view_images=view_images_arg,
             )
             progress.progress(90, text="Finalizando…")
             time.sleep(0.15)

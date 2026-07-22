@@ -3,7 +3,8 @@ const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   WidthType, BorderStyle, AlignmentType, HeadingLevel, ShadingType,
   ImageRun, VerticalAlign, PageOrientation, Header, Footer, TabStopType,
-  TabStopPosition, PageBreak, LevelFormat, convertInchesToTwip
+  TabStopPosition, PageBreak, LevelFormat, convertInchesToTwip,
+  TextDirection, HeightRule
 } = require("docx");
 
 // ---------- DATOS DE ENTRADA ----------
@@ -65,6 +66,12 @@ Eje Z (base de la pieza): Establecer el cero en la cara inferior de la pieza fin
 
 Verificación con comparador de carátula: Antes de mecanizar, comprobar el origen en X e Y apoyándose en referencias verificables —agujeros de referencia o caras perfectamente paralelas— usando el comparador de carátula. Confirmar que la desviación esté dentro de tolerancia antes de dar inicio al programa.`;
 const ORIGIN_TEXT = v(D.origin_text, ORIGIN_DEFAULT);
+
+// Capturas de las 4 vistas (frontal/superior/lateral/isométrica). La app las
+// reescala en Python a la caja exacta de la celda (core/images.py:
+// box_for_g54_view) antes de escribirlas a disco, así que aquí solo se
+// colocan con las medidas que llegan en el JSON.
+const VIEWS = D.views || {};
 
 const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
 const thinBorder = { style: BorderStyle.SINGLE, size: 4, color: "BFBFBF" };
@@ -245,55 +252,113 @@ const datosGeneralesTable = new Table({
   ],
 });
 
-// ---------- VISTAS: 3 vistas + isométrico (placeholders) ----------
-function imagePlaceholderCell(title, width, height) {
+// ---------- VISTAS: 4 vistas con título lateral + imagen real ----------
+// Cada vista es un par [etiqueta rotada | imagen], no una celda con el título
+// arriba: así la imagen aprovecha casi todo el ancho y alto de la celda en
+// vez de perder espacio vertical en un título horizontal.
+//
+// Geometría (debe coincidir con core/images.py: box_for_g54_view):
+//   vistaW   = 7853 DXA (medio ancho de página en horizontal)
+//   LABEL_W  =  450 DXA (columna de la etiqueta rotada)
+//   IMG_W    = 7403 DXA (columna de la imagen)
+//   ROW_H    = 3200 DXA, ATLEAST (mínimo, nunca recorta si la imagen creciera)
+// Garantía de que la tabla nunca "salta" ni "corta" una imagen: cada fila
+// lleva cantSplit=true (Word mueve la fila entera a la página siguiente en
+// vez de partirla) y la imagen ya llega pre-escalada por Python al tamaño
+// máximo que cabe en IMG_W x (ROW_H - márgenes), así que jamás necesita
+// crecer más allá de la fila.
+const vistaW = Math.floor((PAGE_W - 2 * MARGIN) / 2);
+const LABEL_W = 450;
+const IMG_W = vistaW - LABEL_W;
+const ROW_H = 3200;
+const IMG_CELL_MARGIN = 60;
+
+function vistaLabelCell(title) {
   return new TableCell({
-    width: { size: width, type: WidthType.DXA },
-    borders: cellBorders({
+    width: { size: LABEL_W, type: WidthType.DXA },
+    verticalAlign: VerticalAlign.CENTER,
+    textDirection: TextDirection.BOTTOM_TO_TOP_LEFT_TO_RIGHT,
+    shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY },
+    margins: { top: 80, bottom: 80, left: 50, right: 50 },
+    borders: cellBorders(),
+    children: [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text: title, bold: true, size: 15, font: "Arial", color: "FFFFFF" })],
+      }),
+    ],
+  });
+}
+
+function vistaImageCell(view, hint) {
+  const info = view && view.path && fs.existsSync(view.path) ? view : null;
+  const children = [];
+  if (info) {
+    children.push(new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [new ImageRun({
+        type: "png",
+        data: fs.readFileSync(info.path),
+        transformation: {
+          width: Number(info.w) || 485,
+          height: Number(info.h) || 205,
+        },
+      })],
+    }));
+  } else {
+    children.push(
+      new Paragraph({ text: "" }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text: "PEGAR CAPTURA FUSION 360", italics: true, size: 14, font: "Arial", color: "8A94A0" })],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text: hint || "", italics: true, size: 12, font: "Arial", color: "8A94A0" })],
+      }),
+    );
+  }
+  return new TableCell({
+    width: { size: IMG_W, type: WidthType.DXA },
+    verticalAlign: VerticalAlign.CENTER,
+    shading: { type: ShadingType.CLEAR, color: "auto", fill: info ? "FFFFFF" : LIGHTGREY },
+    margins: { top: IMG_CELL_MARGIN, bottom: IMG_CELL_MARGIN, left: IMG_CELL_MARGIN, right: IMG_CELL_MARGIN },
+    borders: cellBorders(info ? {} : {
       top: { style: BorderStyle.DASHED, size: 6, color: "9AA5AF" },
       bottom: { style: BorderStyle.DASHED, size: 6, color: "9AA5AF" },
       left: { style: BorderStyle.DASHED, size: 6, color: "9AA5AF" },
       right: { style: BorderStyle.DASHED, size: 6, color: "9AA5AF" },
     }),
-    shading: { type: ShadingType.CLEAR, color: "auto", fill: LIGHTGREY },
-    margins: { top: 80, bottom: 80, left: 80, right: 80 },
-    children: [
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        children: [new TextRun({ text: title, bold: true, size: 15, font: "Arial", color: STEEL })],
-      }),
-      new Paragraph({ text: "" }),
-      new Paragraph({ text: "" }),
-      new Paragraph({ text: "" }),
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        children: [new TextRun({ text: "[PEGAR CAPTURA FUSION 360 AQUÍ]", italics: true, size: 13, font: "Arial", color: "8A94A0" })],
-      }),
-      new Paragraph({ text: "" }),
-      new Paragraph({ text: "" }),
-      new Paragraph({ text: "" }),
-    ],
+    children,
   });
 }
 
-const vistaW = Math.floor((PAGE_W - 2 * MARGIN) / 2);
+function vistaRow(items) {
+  // items: [[title, view, hint], [title, view, hint]]
+  const cells = [];
+  items.forEach(([title, view, hint]) => {
+    cells.push(vistaLabelCell(title));
+    cells.push(vistaImageCell(view, hint));
+  });
+  return new TableRow({
+    cantSplit: true,
+    height: { value: ROW_H, rule: HeightRule.ATLEAST },
+    children: cells,
+  });
+}
 
 const vistasTable = new Table({
   width: { size: PAGE_W - 2 * MARGIN, type: WidthType.DXA },
-  columnWidths: [vistaW, vistaW],
+  columnWidths: [LABEL_W, IMG_W, LABEL_W, IMG_W],
   rows: [
-    new TableRow({
-      children: [
-        imagePlaceholderCell("VISTA FRONTAL (XZ)", vistaW),
-        imagePlaceholderCell("VISTA SUPERIOR (XY) — Origen G54", vistaW),
-      ],
-    }),
-    new TableRow({
-      children: [
-        imagePlaceholderCell("VISTA LATERAL (YZ)", vistaW),
-        imagePlaceholderCell("VISTA ISOMÉTRICA — Sujeción completa", vistaW),
-      ],
-    }),
+    vistaRow([
+      ["VISTA FRONTAL (XZ)", VIEWS.frontal, "Win+Shift+S en Fusion 360"],
+      ["VISTA SUPERIOR (XY) — ORIGEN G54", VIEWS.superior, "Debe mostrar el punto de origen"],
+    ]),
+    vistaRow([
+      ["VISTA LATERAL (YZ)", VIEWS.lateral, "Win+Shift+S en Fusion 360"],
+      ["VISTA ISOMÉTRICA — SUJECIÓN", VIEWS.isometrica, "Con utillaje/mordaza visible"],
+    ]),
   ],
 });
 

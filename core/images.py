@@ -28,6 +28,21 @@ def box_for(tool_count):
     return BOX_W, _BOX_H_BY_ROWS.get(rows, _BOX_H_MIN)
 
 
+# Caja de imagen para las 4 vistas de la Hoja G54 (frontal/superior/lateral/
+# isométrica). Calculada a partir del ancho de columna real de la tabla en
+# generators/build_g54.js (columna de imagen = 7403 DXA, fila = 3200 DXA,
+# márgenes de celda de 60 DXA por lado; conversión 1 DXA = 1/15 px, la misma
+# que usa el resto de esta app). Si se cambia el layout de la tabla en el
+# script Node, este valor debe recalcularse a la par para que la imagen
+# siga cabiendo exacta en la celda sin descuadrar la tabla.
+G54_VIEW_BOX = (485, 205)
+
+
+def box_for_g54_view():
+    """Caja (ancho, alto) en px para cada una de las 4 vistas de la Hoja G54."""
+    return G54_VIEW_BOX
+
+
 def fit(img_w, img_h, box_w, box_h):
     """Mayor tamaño que cabe en la caja conservando la proporción."""
     if img_w <= 0 or img_h <= 0:
