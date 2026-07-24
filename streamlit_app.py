@@ -7,6 +7,7 @@ los scripts Node.js originales (generators/build4.js … build8.js).
 
 import base64
 import io
+import re
 import time
 from datetime import datetime
 
@@ -64,6 +65,28 @@ G54_ORIGIN_DEFAULT = (
     "o caras perfectamente paralelas— usando el comparador de carátula. Confirmar "
     "que la desviación esté dentro de tolerancia antes de dar inicio al programa."
 )
+
+# ============== Utilidades ==============
+
+def build_download_name(doc_type, project_ref):
+    """Nombre del archivo a descargar: «Tipo de documento + Pieza/Referencia».
+
+    Sustituye al nombre fijo interno que escribe cada script Node. Sanea los
+    caracteres no válidos para nombres de archivo en Windows/macOS/Linux y
+    recorta la longitud. Si no hay referencia, usa solo el tipo de documento.
+    """
+    def clean(text):
+        # Reemplaza los caracteres prohibidos por un espacio y colapsa espacios.
+        text = re.sub(r'[\\/:*?"<>|\r\n\t]+', " ", str(text or ""))
+        return re.sub(r"\s+", " ", text).strip(" .")
+
+    ref = clean(project_ref)
+    # Placeholders típicos que no deben acabar en el nombre del archivo.
+    if ref.startswith("[") or ref in ("—", "-"):
+        ref = ""
+    base = f"{clean(doc_type)} - {ref}".rstrip(" -") if ref else clean(doc_type)
+    return f"{(base or 'Documento')[:120]}.docx"
+
 
 # ============== Estado de sesión ==============
 
@@ -815,9 +838,11 @@ with tab3:
             if error:
                 st.error(f"❌ {error}")
             elif docx_bytes:
+                # Nombre de descarga: «Tipo de documento + Pieza/Referencia».
+                download_name = build_download_name(doc_type, project_ref)
                 st.session_state['history'].append({
                     'doc_type': doc_type,
-                    'filename': filename,
+                    'filename': download_name,
                     'bytes': docx_bytes,
                     'timestamp': datetime.now().strftime("%H:%M:%S"),
                 })
@@ -838,13 +863,13 @@ with tab3:
                     })
                 memory.save(doc_type, mem_payload)
 
-                st.success(f"✅ Documento generado: **{filename}** "
+                st.success(f"✅ Documento generado: **{download_name}** "
                            f"({len(docx_bytes) / 1024:.0f} KB)")
                 st.balloons()
                 st.download_button(
-                    label=f"📥 Descargar {filename}",
+                    label=f"📥 Descargar {download_name}",
                     data=docx_bytes,
-                    file_name=filename,
+                    file_name=download_name,
                     mime="application/vnd.openxmlformats-officedocument"
                          ".wordprocessingml.document",
                     use_container_width=True,
