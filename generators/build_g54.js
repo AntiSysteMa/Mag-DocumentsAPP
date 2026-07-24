@@ -90,7 +90,7 @@ function labelCell(text, width, opts = {}) {
     width: { size: width, type: WidthType.DXA },
     shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY },
     verticalAlign: VerticalAlign.CENTER,
-    margins: { top: 60, bottom: 60, left: 100, right: 100 },
+    margins: { top: 30, bottom: 30, left: 100, right: 100 },
     borders: cellBorders(),
     children: [
       new Paragraph({
@@ -107,7 +107,7 @@ function valueCell(text, width, opts = {}) {
   return new TableCell({
     width: { size: width, type: WidthType.DXA },
     verticalAlign: VerticalAlign.CENTER,
-    margins: { top: 60, bottom: 60, left: 100, right: 100 },
+    margins: { top: 30, bottom: 30, left: 100, right: 100 },
     borders: cellBorders(),
     shading: { type: ShadingType.CLEAR, color: "auto", fill: "FFFFFF" },
     children: [
@@ -123,7 +123,7 @@ function valueCell(text, width, opts = {}) {
 
 function sectionHeader(text) {
   return new Paragraph({
-    spacing: { before: 160, after: 80 },
+    spacing: { before: 90, after: 40 },
     shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY },
     children: [
       new TextRun({ text: "  " + text, bold: true, color: "FFFFFF", size: 19, font: "Arial" }),
@@ -132,10 +132,13 @@ function sectionHeader(text) {
 }
 
 // ---------- HEADER TABLE (logo + company + doc title/meta) ----------
+// Logo reducido (era 60x60) para compactar el banner: es el elemento que más
+// altura le impone a la fila del encabezado, y a este tamaño sigue siendo
+// perfectamente legible.
 const logoImage = new ImageRun({
   type: "png",
   data: fs.readFileSync("logo_claro.png"),
-  transformation: { width: 60, height: 60 },
+  transformation: { width: 46, height: 46 },
 });
 
 const headerTable = new Table({
@@ -152,14 +155,14 @@ const headerTable = new Table({
           width: { size: 1100, type: WidthType.DXA },
           verticalAlign: VerticalAlign.CENTER,
           borders: cellBorders({ top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }),
-          margins: { top: 40, bottom: 40, left: 0, right: 80 },
+          margins: { top: 10, bottom: 10, left: 0, right: 80 },
           children: [new Paragraph({ children: [logoImage] })],
         }),
         new TableCell({
           width: { size: 5200, type: WidthType.DXA },
           verticalAlign: VerticalAlign.CENTER,
           borders: cellBorders({ top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }),
-          margins: { top: 40, bottom: 40, left: 0, right: 0 },
+          margins: { top: 10, bottom: 10, left: 0, right: 0 },
           children: [
             new Paragraph({
               children: [new TextRun({ text: "MAG INDUSTRIES", bold: true, size: 26, font: "Arial", color: NAVY })],
@@ -188,7 +191,7 @@ const headerTable = new Table({
           width: { size: 5238, type: WidthType.DXA },
           verticalAlign: VerticalAlign.CENTER,
           borders: cellBorders({ top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }),
-          margins: { top: 40, bottom: 40, left: 0, right: 0 },
+          margins: { top: 10, bottom: 10, left: 0, right: 0 },
           children: [
             new Paragraph({
               alignment: AlignmentType.RIGHT,
@@ -480,13 +483,18 @@ const doc = new Document({
       properties: {
         page: {
           size: { width: PAGE_H, height: PAGE_W, orientation: PageOrientation.LANDSCAPE },
-          margin: { top: MARGIN, bottom: MARGIN, left: MARGIN, right: MARGIN },
+          // footer: 260 (~0,46 cm) queda por DEBAJO del margen inferior (566).
+          // El default de la librería es 708, mayor que el margen, y eso obliga
+          // a Word a subir el contenido para no pisar el pie de página —
+          // justo lo que empujaba las vistas a una segunda hoja. Bajándolo,
+          // el pie se sitúa más abajo y el cuerpo recupera ese espacio.
+          margin: { top: MARGIN, bottom: MARGIN, left: MARGIN, right: MARGIN, footer: 260 },
         },
       },
       footers: { default: footer },
       children: [
         headerTable,
-        new Paragraph({ text: "", spacing: { after: 100 } }),
+        new Paragraph({ text: "", spacing: { after: 30 } }),
         sectionHeader("DATOS GENERALES"),
         datosGeneralesTable,
         sectionHeader("VISTAS Y ORIGEN DE PIEZA"),
