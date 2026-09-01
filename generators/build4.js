@@ -30,10 +30,26 @@ const refCode = refParts[0] || "";
 const refName = refParts[1] || "";
 const refNum = refParts[2] || "";
 
+// Perfil efectivo del cliente (sector + ficha). Vacio al ejecutar suelto.
+const P = (D.profile && typeof D.profile === "object") ? D.profile : {};
+
+// Idea 6 — nivel de detalle de la ficha: "compacta" (solo parametros, sin
+// renders ni grafico), "estandar" (como siempre) o "extendida" (ademas,
+// fabricante, referencia y limites de cada herramienta).
+const DETAIL = ["compacta", "estandar", "extendida"].includes(P.ficha_detail)
+  ? P.ficha_detail : "estandar";
+
+// Idea 9 — condiciones reales del taller del cliente. Solo endurecen lo que
+// dice el Setup Sheet: si Fusion marca corte en seco, seco se queda, porque
+// la regla de voladizo de MAG no la puede relajar la ficha del cliente.
+const SHOP_COOLANT = v(P.coolant, "");
+const SHOP_DRY = /seco|dry|mql|aire/i.test(SHOP_COOLANT);
+
 const REVISION = v(D.revision, "00");
-const DOC_NUM = refCode && refName
+// Idea 12 — numeracion documental propia del cliente si su ficha la define.
+const DOC_NUM = v(D.doc_number, refCode && refName
   ? `${refCode}-${refName}-FT-${REVISION}`
-  : v(D.project_ref, "SIN-REFERENCIA") + `-FT-${REVISION}`;
+  : v(D.project_ref, "SIN-REFERENCIA") + `-FT-${REVISION}`);
 
 const PIEZA_REF = (() => {
   if (!refCode) return v(D.project_ref, "[Sin referencia en el export]");
@@ -139,6 +155,12 @@ function sectionHeader(text) {
 // ---------- HEADER ----------
 const logoImage = new ImageRun({ type: "png", data: fs.readFileSync("logo_claro.png"), transformation: { width: 66, height: 66 } });
 
+// Idea 11 — co-branding: el logo del cliente se anade junto al de MAG; la
+// marca MAG no se sustituye nunca. Sin logo, la cabecera queda como estaba.
+const clientLogo = (P.logo_path && fs.existsSync(P.logo_path))
+  ? new ImageRun({ type: "png", data: fs.readFileSync(P.logo_path), transformation: { width: 50, height: 50 } })
+  : null;
+
 function buildHeaderTable(titleLine1, titleLine2) {
   return new Table({
     width: { size: CONTENT_W, type: WidthType.DXA },
@@ -146,7 +168,7 @@ function buildHeaderTable(titleLine1, titleLine2) {
     borders: { top: noBorder, bottom: { style: BorderStyle.SINGLE, size: 16, color: NAVY }, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
     rows: [new TableRow({
       children: [
-        new TableCell({ width: { size: 1150, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(), margins: { top: 40, bottom: 40, left: 0, right: 80 }, children: [new Paragraph({ children: [logoImage] })] }),
+        new TableCell({ width: { size: 1150, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(), margins: { top: 40, bottom: 40, left: 0, right: 80 }, children: [new Paragraph({ children: clientLogo ? [logoImage, new TextRun({ text: " " }), clientLogo] : [logoImage] })] }),
         new TableCell({
           width: { size: 5250, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(), margins: { top: 40, bottom: 40, left: 0, right: 0 },
           children: [
@@ -200,7 +222,9 @@ const datosGeneralesTable = new Table({
     fullRow("CLIENTE", v(D.client_name, "[Nombre cliente — no incluido en export]"),
       D.client_name ? {} : { italic: true, color: STEEL }),
     fullRow("PIEZA / REFERENCIA", PIEZA_REF),
-    fullRow("MÁQUINA", `${v(D.machine, "HAAS VF-2 (3 ejes)")}  ·  Postprocesador: ${v(D.postprocessor, "HAAS Next Generation")}`),
+    fullRow("MÁQUINA", `${v(D.machine, "HAAS VF-2 (3 ejes)")}`
+      + `${v(D.machine_taper, "") ? "  ·  Cono: " + D.machine_taper : ""}`
+      + `  ·  Postprocesador: ${v(D.postprocessor, "HAAS Next Generation")}`),
     fullRow("PROGRAMA CNC", `Program ${v(D.program_number, "—")} (O${v(D.program_number, "—")})   ·   Plano de trabajo: ${v(D.work_plane, "#1")}`),
     fullRow("MATERIAL / DUREZA", v(D.material, "[No incluido en export — confirmar]"),
       D.material ? {} : { italic: true, color: STEEL }),
@@ -360,6 +384,13 @@ function buildToolCard(n, tipo, diam, resq, long, flutes, soporte, refrig, refri
               specLine("Porta-herramientas", soporte),
               specLine("Refrigeración", refrig, { bold: true, color: refrigColor }),
               specLine("Tiempo asociado", `${tiempo}  (${pct} del total)`),
+              // Nivel extendido: datos que un operario nuevo agradece tener
+              // delante y que en la ficha compacta solo estorban.
+              ...(DETAIL === "extendida" ? [
+                specLine("Fabricante / Ref.", `${v(tool && tool.vendor, "—")}  ·  ${v(tool && tool.product, "—")}`),
+                specLine("Límites (RPM / avance)", `${v(tool && tool.rpm_max, "—")}  ·  ${v(tool && tool.feedrate_max, "—")}`),
+                specLine("Z mínima alcanzada", v(tool && tool.z_min, "—")),
+              ] : []),
             ],
           }),
         ],
@@ -380,11 +411,18 @@ const tools = (Array.isArray(D.tools) && D.tools.length) ? D.tools : TOOLS_FALLB
 function coolantInfo(coolant) {
   const c = v(coolant, "");
   const dry = !c || /desactiv|off|disabled|seco|none/i.test(c);
-  return {
-    text: dry ? `SIN refrigerante (${c || "Desactivado"})` : `CON refrigerante (${c})`,
-    color: dry ? REDWARN : NAVY,
-    dry,
-  };
+  // Corte en seco segun Fusion: no se relaja nunca, aunque el taller del
+  // cliente trabaje con emulsion.
+  if (dry) {
+    return { text: `SIN refrigerante (${c || "Desactivado"})`, color: REDWARN, dry: true };
+  }
+  // Corte humedo: se imprime el medio real del taller, no el del Setup Sheet.
+  if (SHOP_COOLANT) {
+    return SHOP_DRY
+      ? { text: `SIN refrigerante — ${SHOP_COOLANT} (condición del taller)`, color: REDWARN, dry: true }
+      : { text: `CON refrigerante (${SHOP_COOLANT})`, color: NAVY, dry: false };
+  }
+  return { text: `CON refrigerante (${c})`, color: NAVY, dry: false };
 }
 
 // 'bullnose end mill' → 'Bullnose End Mill'
@@ -460,6 +498,32 @@ const herramientasGrid = new Table({
   rows: gridRows,
 });
 
+// Nivel compacto: las herramientas caben en una tabla, sin renders ni
+// tarjetas, para que la ficha ocupe lo minimo en el taller.
+const compactCols = [700, 4400, 1300, 1300, 900, 3200, 2100, 1806];
+const compactHeaders = ["HTA", "DESCRIPCIÓN", "Ø (mm)", "LONG. (mm)", "FLUTES", "PORTA-HERRAMIENTAS", "REFRIGERACIÓN", "TIEMPO"];
+const herramientasCompacta = new Table({
+  width: { size: CONTENT_W, type: WidthType.DXA },
+  columnWidths: compactCols,
+  rows: [
+    new TableRow({ children: compactHeaders.map((h, i) => headCell(h, compactCols[i])) }),
+    ...tools.map((t, i) => {
+      const ci = coolantInfo(t.coolant);
+      const fill = i % 2 === 0 ? "FFFFFF" : LIGHTGREY;
+      return new TableRow({ children: [
+        dataCell(`T${v(t.number, "?")}`, compactCols[0], { align: AlignmentType.CENTER, bold: true, fill }),
+        dataCell(toolTitle(t), compactCols[1], { fill }),
+        dataCell(v(t.diameter, "—"), compactCols[2], { align: AlignmentType.CENTER, fill }),
+        dataCell(v(t.length, "—"), compactCols[3], { align: AlignmentType.CENTER, fill }),
+        dataCell(v(t.flutes, "—"), compactCols[4], { align: AlignmentType.CENTER, fill }),
+        dataCell(v(t.holder_full, v(t.holder, "—")), compactCols[5], { fill }),
+        dataCell(ci.text, compactCols[6], { fill, bold: true, color: ci.color }),
+        dataCell(v(t.cycle_time, "—"), compactCols[7], { align: AlignmentType.CENTER, fill }),
+      ] });
+    }),
+  ],
+});
+
 // ---------- NOTA REFRIGERACIÓN ----------
 const notaRefrigeracion = [
   new Paragraph({
@@ -470,6 +534,19 @@ const notaRefrigeracion = [
       new TextRun({ text: "SIN refrigerante, corte en seco OBLIGATORIO según ficha técnica del fabricante, sin excepciones.", size: FS_NOTE, font: "Arial", bold: true, color: REDWARN }),
     ],
   }),
+  // Condiciones declaradas en la ficha del cliente: lo que de verdad hay en
+  // su taller, que no tiene por que coincidir con el Setup Sheet.
+  ...(SHOP_COOLANT ? [new Paragraph({
+    spacing: { before: 60, after: 40 },
+    children: [
+      new TextRun({ text: "Condición de taller declarada por el cliente:  ", bold: true, size: FS_NOTE, font: "Arial" }),
+      new TextRun({ text: SHOP_COOLANT, size: FS_NOTE, font: "Arial", bold: true, color: SHOP_DRY ? REDWARN : NAVY }),
+      new TextRun({ text: SHOP_DRY
+        ? " — este taller no usa refrigerante líquido: las operaciones marcadas como húmedas en el Setup Sheet se ejecutan bajo esta condición."
+        : " — medio de refrigeración empleado en las operaciones húmedas de esta ficha.",
+        size: FS_NOTE, font: "Arial" }),
+    ],
+  })] : []),
 ];
 
 // ---------- TABLA DE OPERACIONES ----------
@@ -592,7 +669,7 @@ function buildFooter() {
         children: [
           new TextRun({ text: "MAG Industries — Servicios de ingeniería CAD/CAM", size: FS_FOOT, font: "Arial", color: STEEL }),
           new TextRun({ text: "\t", size: FS_FOOT }),
-          new TextRun({ text: "Alexmakerdesign@gmail.com · +34 635 013 953", size: FS_FOOT, font: "Arial", color: STEEL }),
+          new TextRun({ text: "info@magindustries.es · +34 635 013 953", size: FS_FOOT, font: "Arial", color: STEEL }),
         ],
       }),
       new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Documento de uso interno de taller y evidencia técnica de proceso. Prohibida su distribución sin autorización expresa de MAG Industries.", size: FS_FOOTSMALL, font: "Arial", italics: true, color: "9AA5AF" })] }),
@@ -620,16 +697,23 @@ const doc = new Document({
         new Paragraph({ children: [new PageBreak()] }),
         sectionHeader("HERRAMIENTAS UTILIZADAS"),
         new Paragraph({ text: "", spacing: { after: 100 } }),
-        herramientasGrid,
+        DETAIL === "compacta" ? herramientasCompacta : herramientasGrid,
         ...notaRefrigeracion,
-        new Paragraph({ children: [new PageBreak()] }),
+        // La ficha compacta no parte pagina aqui: cabe todo seguido.
+        ...(DETAIL === "compacta"
+          ? [new Paragraph({ text: "", spacing: { after: 160 } })]
+          : [new Paragraph({ children: [new PageBreak()] })]),
         sectionHeader("SECUENCIA DE OPERACIONES DE MECANIZADO"),
         new Paragraph({ text: "", spacing: { after: 100 } }),
         operacionesTable,
-        new Paragraph({ text: "", spacing: { after: 60 } }),
-        sectionHeader("DISTRIBUCIÓN DE TIEMPO POR HERRAMIENTA"),
-        new Paragraph({ text: "", spacing: { after: 140 } }),
-        distribucionTiempoTable,
+        // El grafico de reparto de tiempo es util para planificar, no para
+        // ejecutar: la ficha compacta lo omite.
+        ...(DETAIL === "compacta" ? [] : [
+          new Paragraph({ text: "", spacing: { after: 60 } }),
+          sectionHeader("DISTRIBUCIÓN DE TIEMPO POR HERRAMIENTA"),
+          new Paragraph({ text: "", spacing: { after: 140 } }),
+          distribucionTiempoTable,
+        ]),
       ],
     },
   ],

@@ -25,7 +25,7 @@ from core.generator import (
 )
 from core.parser import EDITABLE_FIELDS, extract_fusion_data
 from core.presets import PRESETS, PRESET_NAMES
-from core import memory
+from core import clients, memory, sectors
 from ui.components import (
     inject_theme,
     render_dashboard,
@@ -68,23 +68,31 @@ G54_ORIGIN_DEFAULT = (
 
 # ============== Utilidades ==============
 
-def build_download_name(doc_type, project_ref):
-    """Nombre del archivo a descargar: «Tipo de documento + Pieza/Referencia».
+def _clean_filename(text):
+    """Quita los caracteres prohibidos en nombres de archivo y colapsa espacios."""
+    text = re.sub(r'[\\/:*?"<>|\r\n\t]+', " ", str(text or ""))
+    return re.sub(r"\s+", " ", text).strip(" .")
 
-    Sustituye al nombre fijo interno que escribe cada script Node. Sanea los
-    caracteres no válidos para nombres de archivo en Windows/macOS/Linux y
-    recorta la longitud. Si no hay referencia, usa solo el tipo de documento.
+
+def build_download_name(doc_type, project_ref, client=None, revision="", doc_code=""):
+    """Nombre del archivo a descargar.
+
+    Si la ficha del cliente define una plantilla de nombre (idea 15), manda
+    esa, para que el archivo entre en su gestor documental sin renombrarlo.
+    Si no, se usa «Tipo de documento + Pieza/Referencia» de siempre. En ambos
+    casos se sanean los caracteres no válidos y se recorta la longitud.
     """
-    def clean(text):
-        # Reemplaza los caracteres prohibidos por un espacio y colapsa espacios.
-        text = re.sub(r'[\\/:*?"<>|\r\n\t]+', " ", str(text or ""))
-        return re.sub(r"\s+", " ", text).strip(" .")
+    custom = clients.render_filename(client, doc_type, project_ref, revision, doc_code)
+    if custom:
+        base = _clean_filename(custom)
+        if base:
+            return f"{base[:120]}.docx"
 
-    ref = clean(project_ref)
+    ref = _clean_filename(project_ref)
     # Placeholders típicos que no deben acabar en el nombre del archivo.
     if ref.startswith("[") or ref in ("—", "-"):
         ref = ""
-    base = f"{clean(doc_type)} - {ref}".rstrip(" -") if ref else clean(doc_type)
+    base = f"{_clean_filename(doc_type)} - {ref}".rstrip(" -") if ref else _clean_filename(doc_type)
     return f"{(base or 'Documento')[:120]}.docx"
 
 
@@ -125,6 +133,12 @@ FIELD_DEFAULTS = {
     'g54_operator_field': '',
     'g54_material_field': 'D2',
     'g54_hardness_field': '62 HRC',
+    # Campos de la propuesta que la ficha del cliente precarga.
+    'prop_tolerances_field': '',
+    'prop_valid_until_field': '',
+    'prop_scope_field': '',
+    'prop_deliverables_field': '',
+    'prop_doc_number_field': '',
 }
 for _k, _dv in FIELD_DEFAULTS.items():
     st.session_state.setdefault(_k, _dv)
@@ -142,8 +156,18 @@ MEMORY_FIELDS = {
     'g54_operator_field': 'operator',
 }
 
+# La memoria se precarga por pareja (cliente, tipo de documento): antes la
+# clave era solo el tipo, así que un cliente pisaba los datos del anterior.
 if 'memory_loaded_for' not in st.session_state:
     st.session_state['memory_loaded_for'] = None
+
+# Ficha de cliente aplicada la última vez, para no pisar ediciones manuales.
+if 'applied_client' not in st.session_state:
+    st.session_state['applied_client'] = None
+
+# Anexos exigidos ya marcados como preparados (idea 20).
+if 'annexes_done' not in st.session_state:
+    st.session_state['annexes_done'] = {}
 
 # Bootstrap de dependencias Node (necesario la primera vez en Streamlit Cloud)
 if 'node_checked' not in st.session_state:
@@ -164,13 +188,67 @@ with st.sidebar:
     )
     st.caption(DOC_DESCRIPTIONS.get(doc_type, ""))
 
-    # --- Memoria de último uso: precargar al cambiar de tipo de documento ---
-    if st.session_state['memory_loaded_for'] != doc_type:
-        remembered = memory.load(doc_type)
+    st.markdown("---")
+
+    # --- Ficha de cliente: la pieza de la que cuelga toda la personalización ---
+    client_rows = clients.list_clients()
+    client_options = [clients.NO_CLIENT_ID] + [c.get("id") for c in client_rows]
+    client_labels = {clients.NO_CLIENT_ID: "— Sin ficha de cliente —"}
+    for row in client_rows:
+        client_labels[row.get("id")] = (
+            f'{row.get("name")}  ·  {sectors.label(row.get("sector"))}')
+
+    active_client_id = st.selectbox(
+        "Cliente",
+        client_options,
+        format_func=lambda i: client_labels.get(i, i),
+        key="active_client_id",
+        help="La ficha del cliente decide tolerancias, plan de control, nivel de "
+             "detalle, firmas, tarifa y textos por sector. Se gestiona en la "
+             "pestaña 👤 Clientes.",
+    )
+    active_client = clients.get_client(active_client_id)
+    profile = clients.effective(active_client)
+
+    if active_client:
+        st.caption(f'Sector: **{profile["sector_label"]}**  ·  '
+                   f'Tolerancia: {profile["tolerance"]}')
+    else:
+        st.caption("Sin ficha: se usan los valores del sector genérico. "
+                   "Crea una en la pestaña **👤 Clientes**.")
+
+    # Al cambiar de cliente se aplican sus valores por defecto. Solo cuando
+    # cambia, para no pisar lo que el usuario haya editado a mano después.
+    if st.session_state['applied_client'] != active_client_id:
+        machines = profile.get("machines") or []
+        if machines and isinstance(machines[0], dict):
+            st.session_state['machine_field'] = machines[0].get('name') or \
+                st.session_state['machine_field']
+            if machines[0].get("postprocessor"):
+                st.session_state['postprocessor_field'] = machines[0]['postprocessor']
+        # Idea 4/16/17 — tolerancia, condiciones y biblioteca de textos del
+        # sector, listos en el formulario en lugar de en blanco.
+        st.session_state['prop_tolerances_field'] = profile.get('tolerance', '')
+        st.session_state['prop_valid_until_field'] = (
+            profile.get('offer_validity')
+            or '30 días naturales desde la fecha de este documento')
+        st.session_state['prop_scope_field'] = '\n'.join(
+            profile.get('scope_blocks') or [])
+        st.session_state['prop_deliverables_field'] = '\n'.join(
+            profile.get('deliverables') or [])
+        st.session_state['applied_client'] = active_client_id
+        st.session_state['annexes_done'] = {}
+
+    st.markdown("---")
+
+    # --- Memoria de último uso: por cliente Y tipo de documento ---
+    memory_key = (active_client_id, doc_type)
+    if st.session_state['memory_loaded_for'] != memory_key:
+        remembered = memory.load(doc_type, active_client_id)
         for field_key, mem_key in MEMORY_FIELDS.items():
             if remembered.get(mem_key):
                 st.session_state[field_key] = remembered[mem_key]
-        st.session_state['memory_loaded_for'] = doc_type
+        st.session_state['memory_loaded_for'] = memory_key
 
     # --- Preset de material ---
     preset = st.selectbox(
@@ -190,10 +268,7 @@ with st.sidebar:
             st.session_state['g54_hardness_field'] = vals.get('hardness', '62 HRC')
         st.session_state['_applied_preset'] = preset
 
-    if memory.available():
-        st.caption("🟢 Memoria sincronizada (se recuerda tu último uso).")
-    else:
-        st.caption("⚪ Memoria solo en esta sesión (sin conexión a Supabase).")
+    st.caption(memory.storage_label())
 
     st.markdown("---")
     st.markdown("**Datos del proyecto**")
@@ -202,13 +277,21 @@ with st.sidebar:
     # como incompletos.
     show_validation = doc_type not in ("ONE-PAGER", "INFOGRAFÍA")
 
-    client_name = st.text_input(
-        "Nombre del cliente",
-        key="client_field",
-        placeholder="Ej.: Talleres Norte S.A.",
-        help="Aparecerá como destinatario del documento.",
-    )
-    client_ok = validation_badge(client_name, "cliente") if show_validation else True
+    if active_client:
+        client_name = active_client.get("name", "")
+        st.text_input(
+            "Nombre del cliente", value=client_name, disabled=True,
+            help="Viene de la ficha. Cámbialo en la pestaña 👤 Clientes.",
+        )
+        client_ok = True
+    else:
+        client_name = st.text_input(
+            "Nombre del cliente",
+            key="client_field",
+            placeholder="Ej.: Talleres Norte S.A.",
+            help="Aparecerá como destinatario del documento.",
+        )
+        client_ok = validation_badge(client_name, "cliente") if show_validation else True
 
     material = st.text_input(
         "Material / Dureza",
@@ -242,6 +325,27 @@ with st.sidebar:
 
     with st.expander("🛠️ Máquina y documento"):
         st.caption("Estos datos no vienen en el export de Fusion 360.")
+
+        # Parque de máquinas del cliente: la ficha debe nombrar SU máquina y
+        # SU cono, no los nuestros.
+        client_machines = [m for m in (profile.get("machines") or [])
+                           if isinstance(m, dict) and m.get("name")]
+        machine_taper = ""
+        if client_machines:
+            names = [m["name"] for m in client_machines]
+            picked = st.selectbox(
+                "Máquina del cliente", names, key="client_machine_pick",
+                help="Máquinas dadas de alta en la ficha de este cliente.")
+            chosen = next(m for m in client_machines if m["name"] == picked)
+            machine_taper = chosen.get("taper", "") or ""
+            if st.button("Usar esta máquina", use_container_width=True):
+                st.session_state['machine_field'] = chosen['name']
+                if chosen.get("postprocessor"):
+                    st.session_state['postprocessor_field'] = chosen['postprocessor']
+                st.rerun()
+            if machine_taper:
+                st.caption(f"Cono / portaherramientas: **{machine_taper}**")
+
         machine = st.text_input(
             "Máquina", key="machine_field",
             help="Máquina donde se ejecuta el programa.")
@@ -255,6 +359,13 @@ with st.sidebar:
         revision = st.text_input(
             "Revisión", key="revision_field",
             help="Revisión del documento; forma parte del Nº de documento.")
+
+    # Idea 12 — numeración documental del cliente. Aquí solo se consulta el
+    # siguiente código: el contador no avanza hasta que se genera de verdad.
+    next_doc_code = clients.peek_doc_code(
+        active_client, doc_type, project_ref, revision)
+    if next_doc_code:
+        st.caption(f"Nº de documento del cliente: **{next_doc_code}**")
 
     st.markdown("---")
     node_ok = node_ready()
@@ -275,8 +386,9 @@ render_steps(current_step)
 
 # ============== Pestañas ==============
 
-tab1, tab2, tab3, tab4 = st.tabs(
-    ["📤 Cargar Datos", "✏️ Revisar y Editar", "⚡ Generar", "🗂️ Historial"]
+tab1, tab2, tab3, tab4, tab5 = st.tabs(
+    ["📤 Cargar Datos", "✏️ Revisar y Editar", "⚡ Generar", "🗂️ Historial",
+     "👤 Clientes"]
 )
 
 # ---------- 1. Cargar ----------
@@ -497,8 +609,26 @@ with tab2:
             "Título del proyecto",
             placeholder="Ej.: Fabricación de insertos de matriz — Ref. 01_216",
         )
+        # Idea 17 — biblioteca de bloques de alcance del sector: se eligen y se
+        # vuelcan al texto, en vez de escribirlo desde cero cada vez.
+        scope_library = profile.get("scope_blocks") or []
+        if scope_library:
+            lib_cols = st.columns([4, 1])
+            with lib_cols[0]:
+                picked_scope = st.multiselect(
+                    f'Bloques de alcance — {profile["sector_label"]}',
+                    scope_library, default=scope_library, key="prop_scope_pick",
+                    help="Textos habituales de este sector. Elige los que apliquen "
+                         "y pulsa Insertar.")
+            with lib_cols[1]:
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("⬇️ Insertar", use_container_width=True,
+                             key="prop_scope_insert"):
+                    st.session_state["prop_scope_field"] = "\n".join(picked_scope)
+                    st.rerun()
+
         prop_scope = st.text_area(
-            "Alcance del proyecto", height=100,
+            "Alcance del proyecto", height=100, key="prop_scope_field",
             placeholder="Describe el proceso, material y qué incluye el trabajo…",
         )
 
@@ -511,14 +641,23 @@ with tab2:
             )
         with c2:
             prop_tolerances = st.text_input(
-                "Tolerancias",
-                value="Según DIN ISO 2768-mK, salvo indicación específica en plano",
-            )
+                "Tolerancias", key="prop_tolerances_field",
+                help="Precargada desde el sector del cliente.")
             prop_doc_number = st.text_input(
-                "Nº de documento", placeholder="Ej.: MAG-PROP-001")
+                "Nº de documento", key="prop_doc_number_field",
+                placeholder=next_doc_code or "Ej.: MAG-PROP-001",
+                help="Si la ficha del cliente define plantilla de numeración, se "
+                     "genera sola al pulsar Generar.")
 
+        # Idea 17 — entregables típicos del sector, ya escritos.
+        deliv_library = profile.get("deliverables") or []
+        if deliv_library and st.button("⬇️ Cargar entregables del sector",
+                                       key="prop_deliv_insert"):
+            st.session_state["prop_deliverables_field"] = "\n".join(deliv_library)
+            st.rerun()
         prop_deliverables_raw = st.text_area(
             "Entregables (uno por línea)", height=100,
+            key="prop_deliverables_field",
             placeholder="Programación CAM completa y verificada\n"
                         "Mecanizado de desbaste y acabado\n"
                         "Control dimensional final con reporte de calidad",
@@ -540,11 +679,21 @@ with tab2:
 
         c3, c4 = st.columns(2)
         with c3:
-            prop_price = st.text_input("Precio del proyecto (€)", placeholder="Ej.: 600")
+            rate = profile.get("rate_hour")
+            prop_price = st.text_input(
+                "Precio del proyecto (€)", placeholder="Ej.: 600",
+                help=(f"Tarifa acordada con este cliente: {rate} €/h."
+                      if rate else "Precio cerrado del proyecto."))
+            if rate:
+                st.caption(f"💶 Tarifa de la ficha: **{rate} €/h**"
+                           + (f"  ·  Descuento: {profile['discount_pct']} %"
+                              if profile.get("discount_pct") else ""))
         with c4:
             prop_valid_until = st.text_input(
-                "Validez de la oferta",
+                "Validez de la oferta", key="prop_valid_until_field",
                 placeholder="Ej.: 30 días desde la fecha de este documento")
+            if profile.get("payment_terms"):
+                st.caption(f"🧾 Pago: **{profile['payment_terms']}**")
 
     elif doc_type == "CALIDAD":
         st.subheader("2 · Datos de la inspección")
@@ -564,6 +713,18 @@ with tab2:
             f"Cabecera que se autocompletará: **{client_name or '[cliente]'}** · "
             f"**{project_ref or '[referencia]'}** · **{material or '[material]'}**"
         )
+
+        # Idea 5 — el plan de control lo marca el sector del cliente.
+        qc = profile.get("qc") or {}
+        st.markdown("**Plan de control de este cliente**")
+        q1, q2, q3 = st.columns(3)
+        q1.metric("Cotas a controlar", qc.get("dimension_count", "—"))
+        q2.metric("De ellas críticas", qc.get("critical_count", "—"))
+        q3.metric("Tolerancia general", "")
+        q3.caption(profile.get("tolerance", "—"))
+        st.caption("Instrumentos declarados: "
+                   + " · ".join(qc.get("instruments") or ["—"])
+                   + f'  ·  Firmas: {len(profile.get("signatures") or [])}')
 
     elif doc_type == "HOJA G54":
         st.subheader("2 · Datos de la Hoja de Punto Cero (G54)")
@@ -600,6 +761,16 @@ with tab2:
             f"Máquina y postprocesador se toman de «🛠️ Máquina y documento» "
             f"(barra lateral): **{machine or '—'}** · **{postprocessor or '—'}**."
         )
+
+        # Idea 10 — convenciones del taller del cliente: qué origen usa, en
+        # qué rango numera los programas y cómo llama a los amarres.
+        conv = []
+        conv.append(f'Origen: **{profile.get("work_offset") or "G54"}**')
+        if profile.get("program_range"):
+            conv.append(f'Rango de programas: **{profile["program_range"]}**')
+        if profile.get("fixture_naming"):
+            conv.append(f'Amarre: **{profile["fixture_naming"]}**')
+        st.caption("Convenciones de este cliente — " + "  ·  ".join(conv))
 
         st.markdown("**Vistas de la pieza**")
         g54_box_w, g54_box_h = box_for_g54_view()
@@ -665,6 +836,8 @@ with tab3:
             extra = {
                 'machine': machine, 'postprocessor': postprocessor,
                 'variant': variant, 'revision': revision,
+                'machine_taper': machine_taper,
+                'doc_number': next_doc_code,
             }
             tool_images_arg = st.session_state['tool_images']
         elif doc_type == "PROPUESTA":
@@ -677,7 +850,7 @@ with tab3:
                 'quantity': prop_quantity,
                 'machine_process': prop_machine_process,
                 'tolerances': prop_tolerances,
-                'doc_number': prop_doc_number,
+                'doc_number': prop_doc_number or next_doc_code,
                 'deliverables': [l.strip() for l in prop_deliverables_raw.splitlines() if l.strip()],
                 'timeline_phases': [
                     {'fase': prop_phase1, 'duracion': prop_dur1},
@@ -694,6 +867,7 @@ with tab3:
                 'project_ref': project_ref,
                 'inspection_date': qc_inspection_date,
                 'revision': revision,
+                'doc_number': next_doc_code,
             }
         elif doc_type == "HOJA G54":
             edited = {}
@@ -709,6 +883,7 @@ with tab3:
                 'hardness': g54_hardness,
                 'origin_text': g54_origin,
                 'revision': revision,
+                'doc_number': next_doc_code,
             }
             view_images_arg = st.session_state['g54_view_images']
         else:  # ONE-PAGER, INFOGRAFÍA: folletos fijos, sin datos de proyecto
@@ -789,9 +964,33 @@ with tab3:
             else:
                 st.markdown(f"| | |\n|---|---|\n| **Documento** | {doc_type} |\n")
                 st.caption("Folleto fijo de MAG Industries: no requiere datos de proyecto.")
+        # Idea 20 — lista de lo que este cliente exige en cada entrega. La app
+        # avisa antes de generar, en vez de descubrirlo el cliente al recibirlo.
+        required_annexes = profile.get("annexes") or []
+        missing_annexes = []
+        if required_annexes and show_validation:
+            with st.expander(
+                    f"📎 Anexos exigidos por este cliente ({len(required_annexes)})",
+                    expanded=True):
+                st.caption(
+                    "Marca lo que ya tienes preparado. La app no los genera: te "
+                    "avisa para que no se te olvide adjuntarlos.")
+                for annex in required_annexes:
+                    done = st.checkbox(
+                        annex, key=f"annex_{active_client_id}_{annex}",
+                        value=st.session_state["annexes_done"].get(annex, False))
+                    st.session_state["annexes_done"][annex] = done
+                    if not done:
+                        missing_annexes.append(annex)
+
         with col2:
             st.markdown("#### Estado")
             all_ok = client_ok and material_ok and programmer_ok
+            if missing_annexes:
+                st.warning(
+                    "Faltan anexos por preparar: **"
+                    + "**, **".join(missing_annexes)
+                    + "**. Puedes generar igualmente.")
             if show_validation and not all_ok:
                 st.warning("Faltan datos del proyecto en la barra lateral. "
                            "Puedes generar igualmente, pero el documento quedará incompleto.")
@@ -828,6 +1027,7 @@ with tab3:
                 extra=extra,
                 tool_images=tool_images_arg,
                 view_images=view_images_arg,
+                profile=profile,
             )
             progress.progress(90, text="Finalizando…")
             time.sleep(0.15)
@@ -838,8 +1038,14 @@ with tab3:
             if error:
                 st.error(f"❌ {error}")
             elif docx_bytes:
-                # Nombre de descarga: «Tipo de documento + Pieza/Referencia».
-                download_name = build_download_name(doc_type, project_ref)
+                # El contador de numeración solo avanza si el documento se ha
+                # generado de verdad.
+                used_code = clients.consume_doc_code(
+                    active_client, doc_type, project_ref, revision)
+                # Nombre de descarga: plantilla del cliente si la tiene, y si no
+                # «Tipo de documento + Pieza/Referencia».
+                download_name = build_download_name(
+                    doc_type, project_ref, active_client, revision, used_code)
                 st.session_state['history'].append({
                     'doc_type': doc_type,
                     'filename': download_name,
@@ -861,7 +1067,7 @@ with tab3:
                         'stock_dims': g54_stock,
                         'operator': g54_operator,
                     })
-                memory.save(doc_type, mem_payload)
+                memory.save(doc_type, mem_payload, active_client_id)
 
                 st.success(f"✅ Documento generado: **{download_name}** "
                            f"({len(docx_bytes) / 1024:.0f} KB)")
@@ -882,6 +1088,211 @@ with tab4:
     st.subheader("🗂️ Documentos generados en esta sesión")
     st.caption("El historial se vacía al cerrar o recargar la aplicación.")
     render_history(st.session_state['history'])
+
+# ---------- 5. Clientes ----------
+def _lines(text):
+    """Convierte un textarea en lista, ignorando líneas en blanco."""
+    return [l.strip() for l in (text or "").splitlines() if l.strip()]
+
+
+def _parse_machines(text):
+    """«HAAS VF-2 | BT40 | HAAS NGC» por línea → lista de diccionarios."""
+    out = []
+    for line in _lines(text):
+        parts = [p.strip() for p in line.split("|")]
+        if parts and parts[0]:
+            out.append({
+                "name": parts[0],
+                "taper": parts[1] if len(parts) > 1 else "",
+                "postprocessor": parts[2] if len(parts) > 2 else "",
+            })
+    return out
+
+
+def _format_machines(machines):
+    return "\n".join(
+        " | ".join([m.get("name", ""), m.get("taper", ""), m.get("postprocessor", "")]).rstrip(" |")
+        for m in (machines or []) if isinstance(m, dict))
+
+
+with tab5:
+    st.subheader("👤 Fichas de cliente")
+    st.caption(clients.storage_label())
+
+    edit_options = ["➕ Cliente nuevo"] + [c.get("id") for c in client_rows]
+    edit_labels = {"➕ Cliente nuevo": "➕ Cliente nuevo"}
+    edit_labels.update({c.get("id"): c.get("name") for c in client_rows})
+    editing = st.selectbox(
+        "Ficha a editar", edit_options,
+        format_func=lambda i: edit_labels.get(i, i), key="cf_pick")
+
+    is_new = editing == "➕ Cliente nuevo"
+    record = None if is_new else clients.get_client(editing)
+    prof = clients.effective(record)
+    qc_prof = prof.get("qc") or {}
+
+    with st.form("client_form", border=True):
+        c1, c2 = st.columns(2)
+        with c1:
+            f_name = st.text_input(
+                "Nombre del cliente *", value=(record or {}).get("name", ""),
+                placeholder="Ej.: Talleres Norte S.A.")
+            f_contact = st.text_input(
+                "Persona de contacto", value=prof.get("contact_name", ""))
+        with c2:
+            sector_keys = sectors.SECTOR_KEYS
+            current_sector = (record or {}).get("sector") or sectors.DEFAULT_SECTOR
+            f_sector = st.selectbox(
+                "Sector *", sector_keys,
+                index=sector_keys.index(current_sector)
+                if current_sector in sector_keys else 0,
+                format_func=lambda k: sectors.SECTOR_LABELS[k],
+                help="Fija de golpe tolerancias, plan de control, nivel de "
+                     "detalle, anexos y los textos del one-pager.")
+            f_email = st.text_input(
+                "Email de contacto", value=prof.get("contact_email", ""))
+
+        st.markdown("**Técnico**")
+        t1, t2 = st.columns(2)
+        with t1:
+            f_tolerance = st.text_input(
+                "Tolerancia general", value=prof.get("tolerance", ""),
+                help="Rellena sola la propuesta y el reporte de calidad.")
+            detail_keys = list(sectors.FICHA_DETAIL_LEVELS.keys())
+            f_detail = st.selectbox(
+                "Detalle de la ficha de taller", detail_keys,
+                index=detail_keys.index(prof.get("ficha_detail", "estandar"))
+                if prof.get("ficha_detail") in detail_keys else 1,
+                format_func=lambda k: sectors.FICHA_DETAIL_LEVELS[k])
+            f_coolant = st.text_input(
+                "Refrigeración del taller", value=prof.get("coolant", ""),
+                help="Ej.: «Emulsión 6 %», «Seco», «MQL». Si el taller trabaja "
+                     "en seco, la ficha deja de imprimir emulsión.")
+        with t2:
+            f_qc_n = st.number_input(
+                "Cotas a controlar", min_value=1, max_value=30,
+                value=int(qc_prof.get("dimension_count", 5) or 5))
+            f_qc_crit = st.number_input(
+                "De ellas críticas", min_value=0, max_value=30,
+                value=int(qc_prof.get("critical_count", 2) or 0))
+            f_qc_instr = st.text_input(
+                "Instrumentos (separados por coma)",
+                value=", ".join(qc_prof.get("instruments") or []))
+
+        f_machines = st.text_area(
+            "Parque de máquinas — una por línea: Nombre | Cono | Postprocesador",
+            value=_format_machines(prof.get("machines")), height=90,
+            placeholder="HAAS VF-2 (3 ejes) | BT40 | HAAS Next Generation")
+
+        o1, o2, o3 = st.columns(3)
+        with o1:
+            f_offset = st.text_input(
+                "Origen de trabajo", value=prof.get("work_offset", "G54"),
+                help="G54 a G59. Aparece en toda la Hoja de Punto Cero.")
+        with o2:
+            f_range = st.text_input(
+                "Rango de programas", value=prof.get("program_range", ""),
+                placeholder="Ej.: O1000-O1999")
+        with o3:
+            f_fixture = st.text_input(
+                "Nomenclatura de amarre", value=prof.get("fixture_naming", ""),
+                placeholder="Ej.: Mordaza Lang Makro-Grip 125")
+
+        st.markdown("**Comercial**")
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            f_rate = st.text_input("Tarifa (€/h)", value=str(prof.get("rate_hour", "")))
+        with m2:
+            f_discount = st.text_input("Descuento (%)", value=str(prof.get("discount_pct", "")))
+        with m3:
+            f_payment = st.text_input("Plazo de pago", value=prof.get("payment_terms", ""),
+                                      placeholder="Ej.: 30 días")
+        with m4:
+            f_validity = st.text_input("Validez de oferta", value=prof.get("offer_validity", ""),
+                                       placeholder="Ej.: 30 días naturales")
+
+        st.markdown("**Documentación**")
+        d1, d2 = st.columns(2)
+        with d1:
+            f_doc_tpl = st.text_input(
+                "Plantilla de nº de documento", value=prof.get("doc_code_template", ""),
+                placeholder="PROV-{year}-{seq:03d}",
+                help=f"Marcadores: {clients.DOC_CODE_TOKENS}")
+            f_doc_seq = st.number_input(
+                "Contador actual", min_value=0,
+                value=int(prof.get("doc_code_seq", 0) or 0),
+                help="El siguiente documento usará este número + 1.")
+        with d2:
+            f_file_tpl = st.text_input(
+                "Plantilla de nombre de archivo", value=prof.get("filename_template", ""),
+                placeholder="{cliente}_{ref}_{rev}_{fecha}",
+                help=f"Marcadores: {clients.FILENAME_TOKENS}")
+            f_logo = st.file_uploader(
+                "Logo del cliente (PNG, para co-branding)", type=["png"])
+
+        a1, a2 = st.columns(2)
+        with a1:
+            f_annexes = st.text_area(
+                "Anexos exigidos (uno por línea)",
+                value="\n".join(prof.get("annexes") or []), height=110)
+        with a2:
+            f_signatures = st.text_area(
+                "Firmas del documento (una por línea, máx. 4)",
+                value="\n".join(prof.get("signatures") or []), height=110)
+
+        saved = st.form_submit_button(
+            "💾 Guardar ficha", use_container_width=True, type="primary")
+
+    if saved:
+        new_profile = {
+            "contact_name": f_contact,
+            "contact_email": f_email,
+            "tolerance": f_tolerance,
+            "ficha_detail": f_detail,
+            "coolant": f_coolant,
+            "qc": {
+                "dimension_count": int(f_qc_n),
+                "critical_count": min(int(f_qc_crit), int(f_qc_n)),
+                "instruments": [i.strip() for i in f_qc_instr.split(",") if i.strip()],
+            },
+            "machines": _parse_machines(f_machines),
+            "work_offset": f_offset,
+            "program_range": f_range,
+            "fixture_naming": f_fixture,
+            "rate_hour": f_rate,
+            "discount_pct": f_discount,
+            "payment_terms": f_payment,
+            "offer_validity": f_validity,
+            "doc_code_template": f_doc_tpl,
+            "doc_code_seq": int(f_doc_seq),
+            "filename_template": f_file_tpl,
+            "annexes": _lines(f_annexes),
+            "signatures": _lines(f_signatures)[:4],
+        }
+        # El logo solo se sustituye si se sube uno nuevo.
+        if f_logo is not None:
+            new_profile["logo_b64"] = base64.b64encode(f_logo.getvalue()).decode()
+        elif prof.get("logo_b64"):
+            new_profile["logo_b64"] = prof["logo_b64"]
+
+        ok, msg = clients.save_client(
+            None if is_new else editing, f_name, f_sector, new_profile)
+        if ok:
+            st.success(f"✅ {msg}")
+            st.rerun()
+        else:
+            st.error(f"❌ {msg}")
+
+    if not is_new and record:
+        with st.expander("🗑️ Borrar esta ficha"):
+            st.caption("La ficha se borra, pero los documentos ya generados no "
+                       "cambian.")
+            if st.button(f"Borrar «{record.get('name')}» definitivamente",
+                         type="secondary"):
+                ok, msg = clients.delete_client(editing)
+                (st.success if ok else st.error)(msg)
+                if ok:
+                    st.rerun()
 
 st.divider()
 st.caption("MAG Industries © 2026 · Document Generator v2.0 · "

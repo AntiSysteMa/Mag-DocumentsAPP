@@ -1,6 +1,40 @@
 # PROJECT_STATE.md — MAG Industries Document Generator
 
-*Última actualización: sesión del 16/07/2026*
+*Última actualización: sesión del 01/09/2026*
+
+---
+
+## Sesión 01/09/2026 — Perfiles de cliente
+
+**Corrección de contacto.** El QR de WhatsApp del ONE-PAGER apuntaba a `wa.me/34636013953`
+(el typo histórico del 636). Se regeneró apuntando al número correcto y se verificó
+decodificándolo y comprobando los síndromes Reed-Solomon. El email `Alexmakerdesign@gmail.com`
+se sustituyó por `info@magindustries.es` en los 6 generadores.
+
+**Personalización por cliente.** Se implementaron 18 de las 20 ideas de configuración
+(pendientes por decisión del usuario: la 7, vocabulario y unidades, y la 14, idioma del
+documento). Piezas nuevas:
+
+- `core/sectors.py` — 6 sectores (taller general, molde y matricería, aeronáutico, automoción,
+  médico, prototipado). Cada uno fija tolerancia, plan de control, nivel de detalle de la ficha,
+  refrigeración, anexos, firmas, textos del one-pager, bloques de alcance, entregables y casos
+  de referencia.
+- `core/clients.py` — fichas de cliente sobre Supabase con respaldo local, plantillas de
+  numeración documental y de nombre de archivo.
+- Pestaña **👤 Clientes** en la app para dar de alta y editar fichas.
+
+**Hallazgo:** la tabla `doc_memory` **nunca había existido** en Supabase. La app mostraba
+«🟢 Memoria sincronizada» porque solo comprobaba que el cliente Supabase se creara; cada
+guardado fallaba en silencio. Se creó la tabla y se cambió la comprobación a una prueba de
+escritura real.
+
+**Verificación:** los 6 generadores se ejecutan sueltos y con perfil; el one-pager cabe en una
+hoja en los 6 sectores; la página 1 de la Hoja G54 mantiene las 4 vistas. Contado con Word, no
+a ojo.
+
+---
+
+## Sesión del 16/07/2026
 
 ## 1. Qué se logró en esta sesión
 

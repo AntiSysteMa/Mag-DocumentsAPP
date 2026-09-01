@@ -5,6 +5,65 @@ const {
   ImageRun, VerticalAlign, PageOrientation, Footer,
 } = require("docx");
 
+// ---------- DATOS DE ENTRADA ----------
+// La app escribe un JSON con el perfil del cliente y pasa su ruta en
+// GENERATOR_DATA. El one-pager no usa datos de proyecto: lo que consume es
+// `profile.onepager` y `profile.references`, es decir, los textos del SECTOR
+// del destinatario. Sin esa variable el script sigue funcionando con los
+// textos del sector genérico (`node build7.js`).
+const D = (() => {
+  const p = process.env.GENERATOR_DATA;
+  if (!p || !fs.existsSync(p)) return {};
+  try { return JSON.parse(fs.readFileSync(p, "utf8")); }
+  catch (e) { console.error("GENERATOR_DATA ilegible:", e.message); return {}; }
+})();
+
+const v = (value, fallback) => {
+  if (value === null || value === undefined) return fallback;
+  const s = String(value).trim();
+  return s === "" ? fallback : s;
+};
+
+const P = (D.profile && typeof D.profile === "object") ? D.profile : {};
+const OP = (P.onepager && typeof P.onepager === "object") ? P.onepager : {};
+
+// Textos del sector genérico: respaldo exacto del folleto original, para que
+// ejecutar el script suelto siga produciendo el documento de siempre.
+const CARDS_FALLBACK = [
+  ["icon_design.png", "INGENIERÍA Y REDISEÑO", "Rediseño de piezas y ensambles, optimización de material y cambios por modificaciones internas de producto."],
+  ["icon_gear.png", "PROGRAMACIÓN Y PRODUCCIÓN", "Programación CNC y optimización de procesos para cumplir plazos y resolver cuellos de botella."],
+  ["icon_doc.png", "DOCUMENTACIÓN TÉCNICA", "Documentación de proceso y calidad para proyectos internos o externos, lista para auditoría o cliente."],
+  ["icon_automation.png", "AUTOMATIZACIÓN Y APPS A MEDIDA", "Automatizamos tareas repetitivas y creamos herramientas propias de gestión documental para tu equipo."],
+];
+const STEPS_FALLBACK = [
+  "Nos cuentas tu reto: una pieza, un cuello de botella o un proceso a mejorar",
+  "Diseñamos la solución a medida, con plazos y resultados claros",
+  "Tu equipo la aplica sin fricciones — con soporte nuestro si lo necesitas",
+];
+const REFS_FALLBACK = [
+  ["Serie de bancadas mecanizadas", "Reducción del 30 % en tiempo de ciclo tras replantear la estrategia de desbaste."],
+  ["Utillaje de amarre a medida", "Diseño y fabricación de utillaje que eliminó una segunda sujeción."],
+  ["Documentación de proceso para auditoría", "Fichas de taller y hojas de punto cero de una familia completa de piezas."],
+];
+
+// Una tarjeta/paso/referencia solo se acepta si trae la forma esperada; si no,
+// se usa el respaldo, para que un perfil mal formado no rompa el folleto.
+const pickList = (value, expectedLen, fallback) =>
+  (Array.isArray(value) && value.length === fallback.length
+    && value.every(i => Array.isArray(i) ? i.length >= expectedLen : expectedLen === 1))
+    ? value : fallback;
+
+const CARDS = pickList(OP.cards, 3, CARDS_FALLBACK);
+const STEPS = (Array.isArray(OP.steps) && OP.steps.length === 3) ? OP.steps : STEPS_FALLBACK;
+const REFS = pickList(P.references, 2, REFS_FALLBACK);
+
+const TAGLINE_1 = v(OP.tagline1, "Ingeniería de precisión.");
+const TAGLINE_2 = v(OP.tagline2, "Resultados que se notan.");
+const SUBHEAD = v(OP.subhead, "Reforzamos a tu equipo cuando el tiempo aprieta: rediseños, optimización de material, programación CNC, documentación técnica y automatización de tareas repetitivas — con la maquinaria y el equipo que ya tienes.");
+const RIBBON = v(OP.ribbon, "ENFOQUE 100% EN RESULTADOS MEDIBLES — NO FACTURAMOS HORAS");
+const CTA_TITLE = v(OP.cta_title, "¿Tienes un proyecto atascado?");
+const CTA_SUB = v(OP.cta_sub, "Hablemos — sin compromiso.");
+
 const NAVY = "1B2A41";
 const ORANGE = "E07B39";
 const STEEL = "5A6B7A";
@@ -39,8 +98,8 @@ const heroBand = new Table({
         children: [
           new Paragraph({ children: [new TextRun({ text: "MAG INDUSTRIES", bold: true, size: 46, font: "Arial", color: "FFFFFF" })] }),
           new Paragraph({ spacing: { after: 220 }, children: [new TextRun({ text: "Servicios de ingeniería CAD/CAM", italics: true, size: 24, font: "Arial", color: "C9D2DC" })] }),
-          new Paragraph({ spacing: { before: 100 }, children: [new TextRun({ text: "Ingeniería de precisión.", bold: true, size: 46, font: "Arial", color: "FFFFFF" })] }),
-          new Paragraph({ children: [new TextRun({ text: "Resultados que se notan.", bold: true, size: 46, font: "Arial", color: ORANGE })] }),
+          new Paragraph({ spacing: { before: 100 }, children: [new TextRun({ text: TAGLINE_1, bold: true, size: 46, font: "Arial", color: "FFFFFF" })] }),
+          new Paragraph({ children: [new TextRun({ text: TAGLINE_2, bold: true, size: 46, font: "Arial", color: ORANGE })] }),
         ],
       }),
       new TableCell({
@@ -57,50 +116,34 @@ const heroBand = new Table({
 
 // ---------- SUBHEAD ----------
 const subhead = new Paragraph({
-  spacing: { before: 200, after: 100 },
+  spacing: { before: 140, after: 60 },
   alignment: AlignmentType.CENTER,
-  children: [new TextRun({
-    text: "Reforzamos a tu equipo cuando el tiempo aprieta: rediseños, optimización de material, programación CNC, documentación técnica y automatización de tareas repetitivas — con la maquinaria y el equipo que ya tienes.",
-    size: 24, font: "Arial", color: DARKTEXT, italics: true,
-  })],
+  children: [new TextRun({ text: SUBHEAD, size: 24, font: "Arial", color: DARKTEXT, italics: true })],
 });
 
 const ribbon = new Paragraph({
-  spacing: { before: 40, after: 200 },
+  spacing: { before: 40, after: 140 },
   alignment: AlignmentType.CENTER,
   shading: { type: ShadingType.CLEAR, color: "auto", fill: CARDGREY },
-  children: [new TextRun({ text: "🎯  ENFOQUE 100% EN RESULTADOS MEDIBLES — NO FACTURAMOS HORAS", bold: true, size: 20, font: "Arial", color: NAVY })],
+  children: [new TextRun({ text: "🎯  " + RIBBON, bold: true, size: 20, font: "Arial", color: NAVY })],
 });
 
 // ---------- VALUE CARDS (2x2) ----------
-function valueCard(iconFile, titulo, texto) {
-  const icon = new ImageRun({ type: "png", data: fs.readFileSync(iconFile), transformation: { width: 56, height: 56 } });
-  return new TableCell({
-    width: { size: Math.floor(CONTENT_W / 2), type: WidthType.DXA },
-    borders: noBorders(),
-    shading: { type: ShadingType.CLEAR, color: "auto", fill: CARDGREY },
-    margins: { top: 200, bottom: 220, left: 220, right: 220 },
-    children: [
-      new Paragraph({ children: [icon] }),
-      new Paragraph({ spacing: { before: 140, after: 60 }, children: [new TextRun({ text: titulo, bold: true, size: 22, font: "Arial", color: NAVY })] }),
-      new Paragraph({ children: [new TextRun({ text: texto, size: 19, font: "Arial", color: DARKTEXT })] }),
-    ],
-  });
-}
-
 const GAP = 240;
-
 const CARD_W = Math.floor((CONTENT_W - GAP) / 2);
+
 function cardCell(iconFile, titulo, texto, rightPad) {
   return new TableCell({
     width: { size: CARD_W, type: WidthType.DXA },
     borders: noBorders(),
-    margins: { top: 0, bottom: 170, left: 0, right: rightPad ? GAP : 0 },
+    margins: { top: 0, bottom: 120, left: 0, right: rightPad ? GAP : 0 },
     children: [valueCardInner(iconFile, titulo, texto)],
   });
 }
 function valueCardInner(iconFile, titulo, texto) {
-  const icon = new ImageRun({ type: "png", data: fs.readFileSync(iconFile), transformation: { width: 62, height: 62 } });
+  // Un icono ausente no debe tumbar la generación: se cae al icono genérico.
+  const iconPath = fs.existsSync(iconFile) ? iconFile : "icon_gear.png";
+  const icon = new ImageRun({ type: "png", data: fs.readFileSync(iconPath), transformation: { width: 62, height: 62 } });
   const ICON_COL_W = 1500;
   const TEXT_COL_W = CARD_W - ICON_COL_W;
   return new Table({
@@ -145,14 +188,14 @@ const valueGridFixed = new Table({
   columnWidths: [CARD_W, CARD_W],
   borders: noBorders(),
   rows: [
-    new TableRow({ children: [cardCell("icon_design.png", "INGENIERÍA Y REDISEÑO", "Rediseño de piezas y ensambles, optimización de material y cambios por modificaciones internas de producto.", true), cardCell("icon_gear.png", "PROGRAMACIÓN Y PRODUCCIÓN", "Programación CNC y optimización de procesos para cumplir plazos y resolver cuellos de botella.", false)] }),
-    new TableRow({ children: [cardCell("icon_doc.png", "DOCUMENTACIÓN TÉCNICA", "Documentación de proceso y calidad para proyectos internos o externos, lista para auditoría o cliente.", true), cardCell("icon_automation.png", "AUTOMATIZACIÓN Y APPS A MEDIDA", "Automatizamos tareas repetitivas y creamos herramientas propias de gestión documental para tu equipo.", false)] }),
+    new TableRow({ children: [cardCell(CARDS[0][0], CARDS[0][1], CARDS[0][2], true), cardCell(CARDS[1][0], CARDS[1][1], CARDS[1][2], false)] }),
+    new TableRow({ children: [cardCell(CARDS[2][0], CARDS[2][1], CARDS[2][2], true), cardCell(CARDS[3][0], CARDS[3][1], CARDS[3][2], false)] }),
   ],
 });
 
 // ---------- CÓMO FUNCIONA ----------
 const comoFuncionaTitle = new Paragraph({
-  spacing: { before: 220, after: 140 },
+  spacing: { before: 150, after: 100 },
   alignment: AlignmentType.CENTER,
   children: [new TextRun({ text: "¿CÓMO FUNCIONA?", bold: true, size: 28, font: "Arial", color: NAVY })],
 });
@@ -168,7 +211,7 @@ function pasoCell(num, texto) {
         shading: { type: ShadingType.CLEAR, color: "auto", fill: ORANGE },
         children: [new TextRun({ text: "  " + num + "  ", bold: true, size: 34, font: "Arial", color: "FFFFFF" })],
       }),
-      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 140 }, children: [new TextRun({ text: texto, size: 21, font: "Arial", color: DARKTEXT })] }),
+      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100 }, children: [new TextRun({ text: texto, size: 21, font: "Arial", color: DARKTEXT })] }),
     ],
   });
 }
@@ -176,7 +219,36 @@ const pasosTable = new Table({
   width: { size: CONTENT_W, type: WidthType.DXA },
   columnWidths: [Math.floor(CONTENT_W / 3), Math.floor(CONTENT_W / 3), Math.floor(CONTENT_W / 3)],
   borders: noBorders(),
-  rows: [new TableRow({ children: [pasoCell("1", "Nos cuentas tu reto: una pieza, un cuello de botella o un proceso a mejorar"), pasoCell("2", "Diseñamos la solución a medida, con plazos y resultados claros"), pasoCell("3", "Tu equipo la aplica sin fricciones — con soporte nuestro si lo necesitas")] })],
+  rows: [new TableRow({ children: [pasoCell("1", STEPS[0]), pasoCell("2", STEPS[1]), pasoCell("3", STEPS[2])] })],
+});
+
+// ---------- TRABAJOS SIMILARES (filtrados por sector) ----------
+// Franja compacta: el folleto tiene que seguir cabiendo en una sola hoja, así
+// que cada referencia ocupa un título y una línea de detalle, nada más.
+const REF_COL_W = Math.floor(CONTENT_W / 3);
+function refCell(titulo, detalle) {
+  return new TableCell({
+    width: { size: REF_COL_W, type: WidthType.DXA },
+    borders: noBorders(),
+    shading: { type: ShadingType.CLEAR, color: "auto", fill: LIGHTGREY },
+    margins: { top: 70, bottom: 70, left: 130, right: 130 },
+    verticalAlign: VerticalAlign.TOP,
+    children: [
+      new Paragraph({ spacing: { after: 30 }, children: [new TextRun({ text: titulo, bold: true, size: 17, font: "Arial", color: NAVY })] }),
+      new Paragraph({ children: [new TextRun({ text: detalle, size: 15, font: "Arial", color: STEEL, italics: true })] }),
+    ],
+  });
+}
+const referenciasTitle = new Paragraph({
+  spacing: { before: 130, after: 60 },
+  alignment: AlignmentType.CENTER,
+  children: [new TextRun({ text: "TRABAJOS SIMILARES", bold: true, size: 20, font: "Arial", color: NAVY })],
+});
+const referenciasTable = new Table({
+  width: { size: CONTENT_W, type: WidthType.DXA },
+  columnWidths: [REF_COL_W, REF_COL_W, REF_COL_W],
+  borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: { style: BorderStyle.SINGLE, size: 8, color: "FFFFFF" } },
+  rows: [new TableRow({ children: REFS.slice(0, 3).map(r => refCell(r[0], r[1])) })],
 });
 
 // ---------- CTA BANNER ----------
@@ -195,10 +267,10 @@ const ctaBanner = new Table({
         margins: { top: 240, bottom: 240, left: 320, right: 200 },
         borders: noBorders(),
         children: [
-          new Paragraph({ children: [new TextRun({ text: "¿Tienes un proyecto atascado?", bold: true, size: 27, font: "Arial", color: "FFFFFF" })] }),
-          new Paragraph({ spacing: { before: 60, after: 160 }, children: [new TextRun({ text: "Hablemos — sin compromiso.", size: 22, font: "Arial", color: "C9D2DC" })] }),
+          new Paragraph({ children: [new TextRun({ text: CTA_TITLE, bold: true, size: 27, font: "Arial", color: "FFFFFF" })] }),
+          new Paragraph({ spacing: { before: 60, after: 160 }, children: [new TextRun({ text: CTA_SUB, size: 22, font: "Arial", color: "C9D2DC" })] }),
           new Paragraph({ children: [new TextRun({ text: "📞 +34 635 013 953", bold: true, size: 34, font: "Arial", color: ORANGE })] }),
-          new Paragraph({ spacing: { before: 60 }, children: [new TextRun({ text: "Alexmakerdesign@gmail.com", size: 20, font: "Arial", color: "FFFFFF" })] }),
+          new Paragraph({ spacing: { before: 60 }, children: [new TextRun({ text: "info@magindustries.es", size: 20, font: "Arial", color: "FFFFFF" })] }),
         ],
       }),
       new TableCell({
@@ -228,7 +300,9 @@ const doc = new Document({
         valueGridFixed,
         comoFuncionaTitle,
         pasosTable,
-        new Paragraph({ text: "", spacing: { after: 180 } }),
+        referenciasTitle,
+        referenciasTable,
+        new Paragraph({ text: "", spacing: { after: 40 } }),
         ctaBanner,
       ],
     },
