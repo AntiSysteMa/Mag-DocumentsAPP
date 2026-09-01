@@ -29,7 +29,7 @@ SECTORS = {
             "tagline1": "Ingeniería de precisión.",
             "tagline2": "Resultados que se notan.",
             "subhead": (
-                "Reforzamos a tu equipo cuando el tiempo aprieta: rediseños, optimización "
+                "Sumamos capacidad de oficina técnica a tu equipo: rediseños, optimización "
                 "de material, programación CNC, documentación técnica y automatización de "
                 "tareas repetitivas — con la maquinaria y el equipo que ya tienes."
             ),
@@ -49,11 +49,11 @@ SECTORS = {
                  "gestión documental para tu equipo."),
             ],
             "steps": [
-                "Nos cuentas tu reto: una pieza, un cuello de botella o un proceso a mejorar",
+                "Nos cuentas la pieza o el proceso que quieres resolver",
                 "Diseñamos la solución a medida, con plazos y resultados claros",
                 "Tu equipo la aplica sin fricciones — con soporte nuestro si lo necesitas",
             ],
-            "cta_title": "¿Tienes un proyecto atascado?",
+            "cta_title": "¿Hablamos de tu próximo proyecto?",
             "cta_sub": "Hablemos — sin compromiso.",
         },
         "scope_blocks": [
@@ -95,9 +95,9 @@ SECTORS = {
             "tagline1": "Precisión de cierre.",
             "tagline2": "Moldes que entran a la primera.",
             "subhead": (
-                "Trabajamos con matricerías que no pueden permitirse un ajuste extra: "
-                "electrodos, postizos y cavidades programados para que la primera prueba "
-                "de cierre sea la buena — con tu maquinaria y tu equipo."
+                "Trabajamos con matricerías que buscan que la primera prueba de cierre sea "
+                "la definitiva: electrodos, postizos y cavidades programados al detalle "
+                "— con tu maquinaria y tu equipo."
             ),
             "ribbon": "TOLERANCIAS DE CIERRE ±0,02 mm — VERIFICADAS ANTES DE ENTREGAR",
             "cards": [
@@ -119,7 +119,7 @@ SECTORS = {
                 "Programamos y verificamos en simulación antes de tocar el acero",
                 "Recibes la pieza con su informe dimensional de las cotas de cierre",
             ],
-            "cta_title": "¿Un postizo que no llega a tiempo?",
+            "cta_title": "¿Tienes un cierre entre manos?",
             "cta_sub": "Cuéntanos el cierre que necesitas.",
         },
         "scope_blocks": [
@@ -192,7 +192,7 @@ SECTORS = {
                 "Definimos el plan de control y la secuencia de fases antes de mecanizar",
                 "Recibes la pieza con su expediente dimensional y de trazabilidad completo",
             ],
-            "cta_title": "¿Necesitas un proveedor con expediente?",
+            "cta_title": "¿Preparas un expediente de calidad?",
             "cta_sub": "Hablemos de tu plan de control.",
         },
         "scope_blocks": [
@@ -260,7 +260,7 @@ SECTORS = {
                 "Optimizamos proceso y utillaje, y validamos con primera pieza",
                 "Tu equipo lanza la serie con un proceso ya estabilizado",
             ],
-            "cta_title": "¿Un cuello de botella en serie?",
+            "cta_title": "¿Preparas una nueva serie?",
             "cta_sub": "Hablemos de tu tiempo de ciclo.",
         },
         "scope_blocks": [
@@ -398,7 +398,7 @@ SECTORS = {
                 "Te decimos qué hay que tocar para que sea fabricable, y lo programamos",
                 "Recibes la pieza y, si hay cambios, iteramos sobre lo ya hecho",
             ],
-            "cta_title": "¿Un prototipo para ayer?",
+            "cta_title": "¿Tienes un modelo listo para probar?",
             "cta_sub": "Mándanos el modelo y lo vemos.",
         },
         "scope_blocks": [

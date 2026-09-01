@@ -31,7 +31,34 @@ node build_g54.js
 
 1. **Los generadores de documentos son Node.js + `docx`, NO python-docx.** Si Streamlit Cloud requiere Python puro, es una decisión que se toma explícitamente y se documenta aquí — nunca migrar en silencio.
 2. **Un script build*.js = un tipo de documento.** No fusionar lógica de distintos documentos en un mismo script.
-3. **Colores de marca fijos:** navy `#1B2A41`, orange `#E07B39`, steel grey `#5A6B7A`. No usar otros colores de acento sin aprobación explícita del usuario.
+3. **Identidad visual: `generators/brand.js` es la única fuente de verdad.** Fuentes y
+   colores salen de ahí; ningún `build*.js` define los suyos. Deriva de la skill
+   `mi-marca`.
+   - **Colores:** navy profundo `#041A25`, dorado `#D4AF37` (acento), verde `#2EE6A8`
+     (solo estados de validación/OK, nunca decorativo). Texto `#0D1B24` sobre blanco y
+     `#E6EBEE` sobre navy. Los grises son desaturaciones del navy, no un gris ajeno.
+     No introducir otros colores de acento sin aprobación explícita del usuario.
+   - **Excepción documentada:** `REDWARN` y `CAT_GEO/CAT_REF/CAT_TRAT` en `brand.js`
+     quedan fuera de paleta a propósito — codifican información (aviso de corte en
+     seco, leyenda de 5 categorías de cota del reporte de calidad), no decoran.
+   - **Fuentes:** `Saira Stencil One` solo en titulares grandes —es de un solo peso,
+     así que **nunca pedirle `bold`**— y `Barlow` (+ `Barlow Medium` / `Barlow SemiBold`)
+     para todo lo demás. Los ayudantes `titleRun` / `labelRun` / `bodyRun` de `brand.js`
+     ya lo aplican bien: úsalos en vez de escribir `font:` a mano.
+   - **Modo claro a propósito:** `mi-marca` usa oscuro por defecto, pero estos
+     documentos se imprimen. Es la excepción que la propia skill contempla.
+   - **Sin emojis** en ningún documento (regla de `mi-marca`). El `☐` de la Hoja G54
+     es una casilla de formulario, no un emoji, y se queda. Los `🟢🟡⚪` de
+     `core/clients.py` y `core/memory.py` son de la UI interna de Streamlit, no de
+     documentos de cliente.
+
+3b. **Las dos fuentes hay que instalarlas en el equipo que ABRE el .docx.**
+   Generar no las necesita (Node solo escribe el nombre de la fuente en el XML), así
+   que Streamlit Cloud funciona igual. Pero si Word no las encuentra, sustituye por su
+   cuenta y el documento se ve con tipografías mezcladas. Para instalarlas:
+   `powershell -ExecutionPolicy Bypass -File scripts/instalar_fuentes.ps1`.
+   **Al cliente se le manda PDF**, no .docx: al exportar desde un Word que sí tiene las
+   fuentes, quedan incrustadas y el documento se ve igual en cualquier ordenador.
 4. **Datos de contacto canónicos — no reintroducir variantes antiguas:**
    - Teléfono: `+34 635 013 953`. Nunca `636 013 953` (typo histórico).
    - Email: `info@magindustries.es`. Nunca `Alexmakerdesign@gmail.com` (correo personal antiguo).
@@ -75,8 +102,14 @@ silencio. Sin permiso de escritura, las fichas caen a `data/clients.json` (local
 
 ## Estado actual
 
-**Hito actual:** app con fichas de cliente y personalización por sector (18 de las 20 ideas de
-configuración implementadas). Pendientes a petición del usuario: **idea 7** (vocabulario y
-unidades por cliente) e **idea 14** (idioma del documento).
+**Hito actual:** identidad visual de marca aplicada a los 6 generadores vía
+`generators/brand.js` (tipografía Saira Stencil One + Barlow, paleta navy/dorado), sobre la
+app con fichas de cliente y personalización por sector (18 de las 20 ideas de configuración
+implementadas). Pendientes a petición del usuario: **idea 7** (vocabulario y unidades por
+cliente) e **idea 14** (idioma del documento).
+
+**Pendiente en el one-pager de Espumas del Vallès:** las referencias de `data/clients.json`
+son descriptivas de servicio, sin cifras inventadas. Sustituirlas por casos reales antes de
+enviar el documento.
 
 **Ver `PROJECT_STATE.md`** para el detalle de cada sesión.

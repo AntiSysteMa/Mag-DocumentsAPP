@@ -44,18 +44,10 @@ const QC_CRIT = Math.max(0, Math.min(QC_N, parseInt(QC.critical_count, 10) || 0)
 const QC_INSTR = (Array.isArray(QC.instruments) && QC.instruments.length)
   ? QC.instruments : ["Calibre / Micrómetro"];
 
-const NAVY = "1B2A41";
-const ORANGE = "E07B39";
-const STEEL = "5A6B7A";
-const TEAL = "2E7D6B";
-const PURPLE = "6B4C8A";
-const BRONZE = "8A5A2E";
-const LIGHTGREY = "F2F2F2";
-const CARDGREY = "EDEFF1";
-const MIDGREY = "D9D9D9";
-const DARKTEXT = "1A1A1A";
-const REDWARN = "B00020";
-const GREENOK = "1B6E3C";
+// Identidad visual (fuentes y paleta): ver generators/brand.js.
+const {
+  NAVY, GOLD, GREEN_DEEP, TEXT_ON_DARK, DARKTEXT, STEEL, SURFACE, SURFACE_ALT, RULE, REDWARN, CAT_GEO, CAT_REF, CAT_TRAT, FONT_TITLE, FONT_BODY, FONT_BODY_SB, FS, TRACK, titleRun, labelRun,
+} = require("./brand");
 
 const PAGE_W = 16838, PAGE_H = 11906, MARGIN = 566;
 const CONTENT_W = PAGE_W - 2 * MARGIN; // 15706
@@ -76,31 +68,31 @@ function labelCell(text, width) {
   return new TableCell({
     width: { size: width, type: WidthType.DXA }, shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY }, verticalAlign: VerticalAlign.CENTER,
     margins: { top: 90, bottom: 90, left: 140, right: 100 }, borders: cellBorders(),
-    children: [new Paragraph({ children: [new TextRun({ text, bold: true, color: "FFFFFF", size: FS_LABEL, font: "Arial" })] })],
+    children: [new Paragraph({ children: [new TextRun({ text, bold: true, color: "FFFFFF", size: FS_LABEL, font: FONT_BODY })] })],
   });
 }
 function valueCell(text, width, opts = {}) {
   return new TableCell({
     width: { size: width, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, margins: { top: 90, bottom: 90, left: 140, right: 100 }, borders: cellBorders(), shading: { type: ShadingType.CLEAR, color: "auto", fill: "FFFFFF" },
-    children: [new Paragraph({ children: [new TextRun({ text, size: FS_VALUE, font: "Arial", color: opts.color || DARKTEXT, italics: !!opts.italic, bold: !!opts.bold })] })],
+    children: [new Paragraph({ children: [new TextRun({ text, size: FS_VALUE, font: FONT_BODY, color: opts.color || DARKTEXT, italics: !!opts.italic, bold: !!opts.bold })] })],
   });
 }
 function headCell(text, width) {
   return new TableCell({
     width: { size: width, type: WidthType.DXA }, shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY }, verticalAlign: VerticalAlign.CENTER,
     margins: { top: 90, bottom: 90, left: 80, right: 80 }, borders: cellBorders(),
-    children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text, bold: true, color: "FFFFFF", size: FS_TH, font: "Arial" })] })],
+    children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text, bold: true, color: "FFFFFF", size: FS_TH, font: FONT_BODY })] })],
   });
 }
 function dataCell(text, width, opts = {}) {
   return new TableCell({
     width: { size: width, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, margins: { top: 80, bottom: 80, left: 80, right: 80 }, borders: cellBorders(), shading: { type: ShadingType.CLEAR, color: "auto", fill: opts.fill || "FFFFFF" },
-    children: [new Paragraph({ alignment: opts.align || AlignmentType.LEFT, children: [new TextRun({ text, size: FS_TD, bold: !!opts.bold, color: opts.color || DARKTEXT, font: "Arial", italics: !!opts.italic })] })],
+    children: [new Paragraph({ alignment: opts.align || AlignmentType.LEFT, children: [new TextRun({ text, size: FS_TD, bold: !!opts.bold, color: opts.color || DARKTEXT, font: FONT_BODY, italics: !!opts.italic })] })],
   });
 }
 function badgeCell(code, width, opts = {}) {
   const map = {
-    DIM: [NAVY, "DIM"], SUP: [ORANGE, "SUP"], GEO: [TEAL, "GEO"], REF: [PURPLE, "REF"], TRAT: [BRONZE, "TRAT"],
+    DIM: [NAVY, "DIM"], SUP: [GOLD, "SUP"], GEO: [CAT_GEO, "GEO"], REF: [CAT_REF, "REF"], TRAT: [CAT_TRAT, "TRAT"],
   };
   const [color, label] = map[code] || [STEEL, code];
   return new TableCell({
@@ -108,31 +100,31 @@ function badgeCell(code, width, opts = {}) {
     children: [new Paragraph({
       alignment: AlignmentType.CENTER,
       shading: { type: ShadingType.CLEAR, color: "auto", fill: color },
-      children: [new TextRun({ text: label, bold: true, color: "FFFFFF", size: FS_BADGE, font: "Arial" })],
+      children: [new TextRun({ text: label, bold: true, color: "FFFFFF", size: FS_BADGE, font: FONT_BODY })],
     })],
   });
 }
 function resultCell(text, width, opts = {}) {
   let color = STEEL;
-  if (text === "OK") color = GREENOK; else if (text === "NOK") color = REDWARN;
+  if (text === "OK") color = GREEN_DEEP; else if (text === "NOK") color = REDWARN;
   return new TableCell({
     width: { size: width, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, margins: { top: 80, bottom: 80, left: 80, right: 80 }, borders: cellBorders(), shading: { type: ShadingType.CLEAR, color: "auto", fill: opts.fill || "FFFFFF" },
-    children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text, bold: true, color, size: FS_TD, font: "Arial" })] })],
+    children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text, bold: true, color, size: FS_TD, font: FONT_BODY })] })],
   });
 }
 function sectionHeader(text) {
   return new Paragraph({
     spacing: { before: 200, after: 120 }, keepNext: true,
     shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY },
-    border: { left: { style: BorderStyle.SINGLE, size: 36, color: ORANGE, space: 4 } },
-    children: [new TextRun({ text: "   " + text, bold: true, color: "FFFFFF", size: FS_SECTION, font: "Arial" })],
+    border: { left: { style: BorderStyle.SINGLE, size: 36, color: GOLD, space: 4 } },
+    children: [new TextRun({ text: "   " + text, bold: true, color: "FFFFFF", size: FS_SECTION, font: FONT_BODY })],
   });
 }
 function phaseHeader(text, color) {
   return new Paragraph({
     spacing: { before: 220, after: 120 }, keepNext: true,
     shading: { type: ShadingType.CLEAR, color: "auto", fill: color },
-    children: [new TextRun({ text: "   " + text, bold: true, color: "FFFFFF", size: FS_SECTION, font: "Arial" })],
+    children: [new TextRun({ text: "   " + text, bold: true, color: "FFFFFF", size: FS_SECTION, font: FONT_BODY })],
   });
 }
 
@@ -155,23 +147,23 @@ const headerTable = new Table({
       new TableCell({
         width: { size: 5250, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(),
         children: [
-          new Paragraph({ children: [new TextRun({ text: "MAG INDUSTRIES", bold: true, size: FS_TITLE, font: "Arial", color: NAVY })] }),
-          new Paragraph({ children: [new TextRun({ text: "Servicios de ingeniería CAD/CAM", italics: true, size: FS_META + 2, font: "Arial", color: STEEL })] }),
+          new Paragraph({ children: [new TextRun(titleRun("MAG INDUSTRIES", FS_TITLE, NAVY))] }),
+          new Paragraph({ children: [new TextRun({ text: "Servicios de ingeniería CAD/CAM", size: FS_META + 2, font: FONT_BODY, color: STEEL, characterSpacing: 14 })] }),
         ],
       }),
       new TableCell({
         width: { size: 4150, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(),
         children: [
-          new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "REPORTE DE CONTROL", bold: true, size: FS_SUBTITLE + 2, font: "Arial", color: DARKTEXT })] }),
-          new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "DE CALIDAD", bold: true, size: FS_SUBTITLE - 2, font: "Arial", color: ORANGE })] }),
+          new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun(labelRun("REPORTE DE CONTROL", FS_SUBTITLE + 2, DARKTEXT))] }),
+          new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun(labelRun("DE CALIDAD", FS_SUBTITLE - 2, GOLD))] }),
         ],
       }),
       new TableCell({
         width: { size: 5156, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(),
         children: [
-          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Doc. Nº: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: DOC_NUM, size: FS_META, font: "Arial", bold: true, color: DARKTEXT })] }),
-          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Fecha inspección: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: INSPECTION_DATE, size: FS_META, font: "Arial" })] }),
-          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Revisión: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: REVISION, size: FS_META, font: "Arial" })] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Doc. Nº: ", size: FS_META, font: FONT_BODY, color: STEEL }), new TextRun({ text: DOC_NUM, size: FS_META, font: FONT_BODY, bold: true, color: DARKTEXT })] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Fecha inspección: ", size: FS_META, font: FONT_BODY, color: STEEL }), new TextRun({ text: INSPECTION_DATE, size: FS_META, font: FONT_BODY })] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Revisión: ", size: FS_META, font: FONT_BODY, color: STEEL }), new TextRun({ text: REVISION, size: FS_META, font: FONT_BODY })] }),
         ],
       }),
     ],
@@ -206,16 +198,16 @@ const resultadoGlobalCell = new TableCell({
   shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY },
   margins: { top: 200, bottom: 200, left: 200, right: 200 },
   children: [
-    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "RESULTADO GLOBAL DE LA INSPECCIÓN", bold: true, size: FS_LABEL, font: "Arial", color: "FFFFFF" })] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 140 }, children: [new TextRun({ text: "[APTO / APTO CON OBSERVACIONES / NO APTO]", bold: true, size: 26, font: "Arial", color: ORANGE })] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 140 }, children: [new TextRun({ text: "Puntos controlados: [__]   ·   OK: [__]   ·   NOK: [__]   ·   Conformidad: [__]%", size: FS_FOOTSMALL + 2, font: "Arial", color: "D9D9D9" })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun(labelRun("RESULTADO GLOBAL DE LA INSPECCIÓN", FS_LABEL, TEXT_ON_DARK))] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 140 }, children: [new TextRun({ text: "[APTO / APTO CON OBSERVACIONES / NO APTO]", bold: true, size: 26, font: FONT_BODY, color: GOLD })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 140 }, children: [new TextRun({ text: "Puntos controlados: [__]   ·   OK: [__]   ·   NOK: [__]   ·   Conformidad: [__]%", size: FS_FOOTSMALL + 2, font: FONT_BODY, color: "D9D9D9" })] }),
   ],
 });
 
 const leftCellPanel = new TableCell({
   width: { size: LEFT_W, type: WidthType.DXA }, borders: noBorders(), margins: { top: 0, bottom: 0, left: 0, right: 100 },
   children: [
-    new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: "DATOS GENERALES", bold: true, size: FS_SECTION - 2, font: "Arial", color: NAVY })] }),
+    new Paragraph({ spacing: { after: 80 }, children: [new TextRun(labelRun("DATOS GENERALES", FS_SECTION - 2, NAVY))] }),
     datosGeneralesTable,
   ],
 });
@@ -225,10 +217,10 @@ const panelPage1 = new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, 
 // ---------- LEYENDA DE TIPOS DE TOLERANCIA ----------
 const leyendaItems = [
   ["DIM", NAVY, "DIMENSIONAL", "Cotas lineales, diámetros, profundidades, radios"],
-  ["SUP", ORANGE, "SUPERFICIAL", "Acabado / rugosidad superficial (Ra, Rz)"],
-  ["GEO", TEAL, "GEOMÉTRICA", "Planitud, paralelismo, perpendicularidad, posición (GD&T)"],
-  ["REF", PURPLE, "DE REFERENCIA", "Datums, origen de pieza, puntos de referencia"],
-  ["TRAT", BRONZE, "PINTURA / TRAT. TÉRMICO O QUÍMICO", "Dureza tras tratamiento, recubrimiento, acabado químico"],
+  ["SUP", GOLD, "SUPERFICIAL", "Acabado / rugosidad superficial (Ra, Rz)"],
+  ["GEO", CAT_GEO, "GEOMÉTRICA", "Planitud, paralelismo, perpendicularidad, posición (GD&T)"],
+  ["REF", CAT_REF, "DE REFERENCIA", "Datums, origen de pieza, puntos de referencia"],
+  ["TRAT", CAT_TRAT, "PINTURA / TRAT. TÉRMICO O QUÍMICO", "Dureza tras tratamiento, recubrimiento, acabado químico"],
 ];
 const leyendaColW = Math.floor(CONTENT_W / 5);
 function leyendaCard(code, color, titulo, desc) {
@@ -237,10 +229,10 @@ function leyendaCard(code, color, titulo, desc) {
     children: [
       new Paragraph({
         shading: { type: ShadingType.CLEAR, color: "auto", fill: color }, alignment: AlignmentType.CENTER, spacing: { after: 60 },
-        children: [new TextRun({ text: "  " + code + "  ", bold: true, color: "FFFFFF", size: FS_LABEL, font: "Arial" })],
+        children: [new TextRun({ text: "  " + code + "  ", bold: true, color: "FFFFFF", size: FS_LABEL, font: FONT_BODY })],
       }),
-      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 30 }, children: [new TextRun({ text: titulo, bold: true, size: FS_FOOTSMALL + 3, font: "Arial", color: DARKTEXT })] }),
-      new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: desc, italics: true, size: FS_FOOTSMALL + 1, font: "Arial", color: STEEL })] }),
+      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 30 }, children: [new TextRun({ text: titulo, bold: true, size: FS_FOOTSMALL + 3, font: FONT_BODY, color: DARKTEXT })] }),
+      new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: desc, italics: true, size: FS_FOOTSMALL + 1, font: FONT_BODY, color: STEEL })] }),
     ],
   });
 }
@@ -273,7 +265,7 @@ function buildFaseTable(rows) {
 
 const filasDiseno = [
   ctrlRow(1, "REF", "Verificación de datum / origen principal según plano de diseño", "[__]", "[__]", "[__]", "Revisión de plano", "[OK/NOK]", "[__]", "FFFFFF"),
-  ctrlRow(2, "GEO", "Tolerancia geométrica especificada en plano (planitud / posición)", "[__]", "[__]", "[__]", "Revisión de plano", "[OK/NOK]", "[__]", LIGHTGREY),
+  ctrlRow(2, "GEO", "Tolerancia geométrica especificada en plano (planitud / posición)", "[__]", "[__]", "[__]", "Revisión de plano", "[OK/NOK]", "[__]", SURFACE),
   ctrlRow(3, "DIM", "Cota crítica de diseño a validar antes de programar CAM", "[__]", "[__]", "[__]", "Revisión de plano", "[OK/NOK]", "[__]", "FFFFFF"),
 ];
 
@@ -298,20 +290,20 @@ function planMecanizado() {
     const valor = tipo === "SUP" ? "Ra [__]" : "[__] mm";
     filas.push(ctrlRow(i + 1, tipo, desc, valor, TOL_DEFAULT, valor, instrumento,
       "[OK/NOK]", critica ? "CRÍTICA — verificación obligatoria" : "[__]",
-      i % 2 === 0 ? "FFFFFF" : LIGHTGREY));
+      i % 2 === 0 ? "FFFFFF" : SURFACE));
   }
   // El origen G54 se comprueba siempre, sea cual sea el plan del cliente.
   filas.push(ctrlRow(QC_N + 1, "REF",
     "Verificación de origen G54 tras mecanizado (coincide con hoja de punto cero)",
     "[__]", "[__]", "[__]", "Sonda / Buscador de bordes", "[OK/NOK]", "[__]",
-    QC_N % 2 === 0 ? "FFFFFF" : LIGHTGREY));
+    QC_N % 2 === 0 ? "FFFFFF" : SURFACE));
   return filas;
 }
 const filasMecanizado = planMecanizado();
 
 const filasPostProceso = [
   ctrlRow(1, "TRAT", "Dureza final tras tratamiento térmico", "[__] HRC", "±[__] HRC", "[__] HRC", "Durómetro", "[OK/NOK]", "[__]", "FFFFFF"),
-  ctrlRow(2, "TRAT", "Recubrimiento / pintura aplicada según especificación de plano", "[__]", "[__]", "[__]", "Inspección visual / espesor de capa", "[OK/NOK]", "[__]", LIGHTGREY),
+  ctrlRow(2, "TRAT", "Recubrimiento / pintura aplicada según especificación de plano", "[__]", "[__]", "[__]", "Inspección visual / espesor de capa", "[OK/NOK]", "[__]", SURFACE),
   ctrlRow(3, "DIM", "Verificación dimensional post-tratamiento (control de distorsión térmica)", "[__] mm", "±[__] mm", "[__] mm", "Calibre / Micrómetro", "[OK/NOK]", "[__]", "FFFFFF"),
 ];
 
@@ -319,10 +311,10 @@ const filasPostProceso = [
 const notaMetodologica = new Paragraph({
   spacing: { before: 120, after: 40 },
   children: [
-    new TextRun({ text: "Cómo usar esta plantilla: ", bold: true, size: FS_NOTE, font: "Arial" }),
-    new TextRun({ text: "cada fila representa un punto de control. Añade o elimina filas según los puntos reales a verificar en cada fase, y marca el ", size: FS_NOTE, font: "Arial" }),
-    new TextRun({ text: "TIPO", bold: true, size: FS_NOTE, font: "Arial" }),
-    new TextRun({ text: " correspondiente (DIM · SUP · GEO · REF · TRAT, ver leyenda). El resultado global de la inspección se calcula a partir del conjunto de las tres fases.", size: FS_NOTE, font: "Arial" }),
+    new TextRun({ text: "Cómo usar esta plantilla: ", bold: true, size: FS_NOTE, font: FONT_BODY }),
+    new TextRun({ text: "cada fila representa un punto de control. Añade o elimina filas según los puntos reales a verificar en cada fase, y marca el ", size: FS_NOTE, font: FONT_BODY }),
+    new TextRun({ text: "TIPO", bold: true, size: FS_NOTE, font: FONT_BODY }),
+    new TextRun({ text: " correspondiente (DIM · SUP · GEO · REF · TRAT, ver leyenda). El resultado global de la inspección se calcula a partir del conjunto de las tres fases.", size: FS_NOTE, font: FONT_BODY }),
   ],
 });
 
@@ -331,10 +323,10 @@ function firmaBlock(titulo, width) {
   return new TableCell({
     width: { size: width || Math.floor(CONTENT_W / 3), type: WidthType.DXA }, borders: noBorders(), margins: { top: 300, bottom: 0, left: 0, right: 260 },
     children: [
-      new Paragraph({ spacing: { after: 500 }, children: [new TextRun({ text: titulo, bold: true, size: FS_LABEL, font: "Arial", color: NAVY })] }),
-      new Paragraph({ border: { top: { style: BorderStyle.SINGLE, size: 4, color: MIDGREY } }, children: [new TextRun({ text: "" })] }),
-      new Paragraph({ spacing: { before: 60 }, children: [new TextRun({ text: "Nombre y firma", size: FS_FOOT, font: "Arial", color: STEEL, italics: true })] }),
-      new Paragraph({ spacing: { before: 160 }, children: [new TextRun({ text: "Fecha: ______________", size: FS_FOOT, font: "Arial", color: STEEL })] }),
+      new Paragraph({ spacing: { after: 500 }, children: [new TextRun({ text: titulo, bold: true, size: FS_LABEL, font: FONT_BODY, color: NAVY })] }),
+      new Paragraph({ border: { top: { style: BorderStyle.SINGLE, size: 4, color: RULE } }, children: [new TextRun({ text: "" })] }),
+      new Paragraph({ spacing: { before: 60 }, children: [new TextRun({ text: "Nombre y firma", size: FS_FOOT, font: FONT_BODY, color: STEEL, italics: true })] }),
+      new Paragraph({ spacing: { before: 160 }, children: [new TextRun({ text: "Fecha: ______________", size: FS_FOOT, font: FONT_BODY, color: STEEL })] }),
     ],
   });
 }
@@ -350,15 +342,15 @@ function buildFooter() {
   return new Footer({
     children: [
       new Paragraph({
-        border: { top: { style: BorderStyle.SINGLE, size: 4, color: MIDGREY } }, spacing: { before: 60 },
+        border: { top: { style: BorderStyle.SINGLE, size: 4, color: RULE } }, spacing: { before: 60 },
         tabStops: [{ type: TabStopType.RIGHT, position: CONTENT_W }],
         children: [
-          new TextRun({ text: "MAG Industries — Servicios de ingeniería CAD/CAM", size: FS_FOOT, font: "Arial", color: STEEL }),
+          new TextRun({ text: "MAG Industries — Servicios de ingeniería CAD/CAM", size: FS_FOOT, font: FONT_BODY, color: STEEL }),
           new TextRun({ text: "\t", size: FS_FOOT }),
-          new TextRun({ text: "info@magindustries.es · +34 635 013 953", size: FS_FOOT, font: "Arial", color: STEEL }),
+          new TextRun({ text: "info@magindustries.es · +34 635 013 953", size: FS_FOOT, font: FONT_BODY, color: STEEL }),
         ],
       }),
-      new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Documento de evidencia técnica de control de calidad. Prohibida su distribución sin autorización expresa de MAG Industries.", size: FS_FOOTSMALL, font: "Arial", italics: true, color: "9AA5AF" })] }),
+      new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Documento de evidencia técnica de control de calidad. Prohibida su distribución sin autorización expresa de MAG Industries.", size: FS_FOOTSMALL, font: FONT_BODY, italics: true, color: "9AA5AF" })] }),
     ],
   });
 }
@@ -385,7 +377,7 @@ const doc = new Document({
         phaseHeader("FASE 2 — MECANIZADO", NAVY),
         buildFaseTable(filasMecanizado),
         new Paragraph({ children: [new PageBreak()] }),
-        phaseHeader("FASE 3 — POSTERIOR AL MECANIZADO (tratamiento / acabado)", BRONZE),
+        phaseHeader("FASE 3 — POSTERIOR AL MECANIZADO (tratamiento / acabado)", CAT_TRAT),
         buildFaseTable(filasPostProceso),
         new Paragraph({ text: "", spacing: { after: 260 } }),
         sectionHeader("VALIDACIÓN"),

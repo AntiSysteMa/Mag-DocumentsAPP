@@ -24,12 +24,10 @@ const v = (value, fallback) => {
   return s === "" ? fallback : s;
 };
 
-const NAVY = "1B2A41";
-const ORANGE = "E07B39";
-const STEEL = "5A6B7A";
-const LIGHTGREY = "F2F2F2";
-const MIDGREY = "D9D9D9";
-const DARKTEXT = "1A1A1A";
+// Identidad visual (fuentes y paleta): ver generators/brand.js.
+const {
+  NAVY, GOLD, TEXT_ON_DARK, DARKTEXT, STEEL, SURFACE, RULE, FONT_TITLE, FONT_BODY, FONT_BODY_SB, FS, TRACK, titleRun, labelRun,
+} = require("./brand");
 
 const PAGE_W = 16838; // A4 landscape width in DXA (297mm)
 const PAGE_H = 11906; // A4 landscape height in DXA (210mm)
@@ -106,7 +104,7 @@ function labelCell(text, width, opts = {}) {
     children: [
       new Paragraph({
         children: [
-          new TextRun({ text: text, bold: true, color: "FFFFFF", size: 15, font: "Arial" }),
+          new TextRun({ text: text, bold: true, color: "FFFFFF", size: 15, font: FONT_BODY }),
         ],
       }),
     ],
@@ -124,7 +122,7 @@ function valueCell(text, width, opts = {}) {
     children: [
       new Paragraph({
         children: [
-          new TextRun({ text: text, size: 18, font: "Arial", color: DARKTEXT }),
+          new TextRun({ text: text, size: 18, font: FONT_BODY, color: DARKTEXT }),
         ],
       }),
     ],
@@ -137,7 +135,7 @@ function sectionHeader(text) {
     spacing: { before: 90, after: 40 },
     shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY },
     children: [
-      new TextRun({ text: "  " + text, bold: true, color: "FFFFFF", size: 19, font: "Arial" }),
+      new TextRun({ text: "  " + text, bold: true, color: "FFFFFF", size: 19, font: FONT_BODY }),
     ],
   });
 }
@@ -183,10 +181,10 @@ const headerTable = new Table({
           margins: { top: 10, bottom: 10, left: 0, right: 0 },
           children: [
             new Paragraph({
-              children: [new TextRun({ text: "MAG INDUSTRIES", bold: true, size: 26, font: "Arial", color: NAVY })],
+              children: [new TextRun(titleRun("MAG INDUSTRIES", 26, NAVY))],
             }),
             new Paragraph({
-              children: [new TextRun({ text: "Servicios de ingeniería CAD/CAM", italics: true, size: 16, font: "Arial", color: STEEL })],
+              children: [new TextRun({ text: "Servicios de ingeniería CAD/CAM", size: 16, font: FONT_BODY, color: STEEL, characterSpacing: 14 })],
             }),
           ],
         }),
@@ -197,11 +195,11 @@ const headerTable = new Table({
           children: [
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              children: [new TextRun({ text: "HOJA DE PUNTO CERO", bold: true, size: 22, font: "Arial", color: DARKTEXT })],
+              children: [new TextRun(labelRun("HOJA DE PUNTO CERO", 22, DARKTEXT))],
             }),
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              children: [new TextRun({ text: `ORIGEN DE PIEZA — ${OFFSET}`, bold: true, size: 18, font: "Arial", color: ORANGE })],
+              children: [new TextRun({ text: `ORIGEN DE PIEZA — ${OFFSET}`, bold: true, size: 18, font: FONT_BODY, color: GOLD })],
             }),
           ],
         }),
@@ -213,18 +211,18 @@ const headerTable = new Table({
           children: [
             new Paragraph({
               alignment: AlignmentType.RIGHT,
-              children: [new TextRun({ text: "Doc. Nº: ", size: 14, font: "Arial", color: STEEL }),
-                         new TextRun({ text: DOC_NUM, size: 14, font: "Arial", bold: true, color: DARKTEXT })],
+              children: [new TextRun({ text: "Doc. Nº: ", size: 14, font: FONT_BODY, color: STEEL }),
+                         new TextRun({ text: DOC_NUM, size: 14, font: FONT_BODY, bold: true, color: DARKTEXT })],
             }),
             new Paragraph({
               alignment: AlignmentType.RIGHT,
-              children: [new TextRun({ text: "Fecha: ", size: 14, font: "Arial", color: STEEL }),
-                         new TextRun({ text: DOC_DATE, size: 14, font: "Arial" })],
+              children: [new TextRun({ text: "Fecha: ", size: 14, font: FONT_BODY, color: STEEL }),
+                         new TextRun({ text: DOC_DATE, size: 14, font: FONT_BODY })],
             }),
             new Paragraph({
               alignment: AlignmentType.RIGHT,
-              children: [new TextRun({ text: "Revisión: ", size: 14, font: "Arial", color: STEEL }),
-                         new TextRun({ text: REVISION, size: 14, font: "Arial" })],
+              children: [new TextRun({ text: "Revisión: ", size: 14, font: FONT_BODY, color: STEEL }),
+                         new TextRun({ text: REVISION, size: 14, font: FONT_BODY })],
             }),
           ],
         }),
@@ -305,7 +303,7 @@ function vistaLabelCell(title) {
     children: [
       new Paragraph({
         alignment: AlignmentType.CENTER,
-        children: [new TextRun({ text: title, bold: true, size: 15, font: "Arial", color: "FFFFFF" })],
+        children: [new TextRun({ text: title, bold: true, size: 15, font: FONT_BODY, color: "FFFFFF" })],
       }),
     ],
   });
@@ -331,18 +329,18 @@ function vistaImageCell(view, hint) {
       new Paragraph({ text: "" }),
       new Paragraph({
         alignment: AlignmentType.CENTER,
-        children: [new TextRun({ text: "PEGAR CAPTURA FUSION 360", italics: true, size: 14, font: "Arial", color: "8A94A0" })],
+        children: [new TextRun({ text: "PEGAR CAPTURA FUSION 360", italics: true, size: 14, font: FONT_BODY, color: "8A94A0" })],
       }),
       new Paragraph({
         alignment: AlignmentType.CENTER,
-        children: [new TextRun({ text: hint || "", italics: true, size: 12, font: "Arial", color: "8A94A0" })],
+        children: [new TextRun({ text: hint || "", italics: true, size: 12, font: FONT_BODY, color: "8A94A0" })],
       }),
     );
   }
   return new TableCell({
     width: { size: IMG_W, type: WidthType.DXA },
     verticalAlign: VerticalAlign.CENTER,
-    shading: { type: ShadingType.CLEAR, color: "auto", fill: info ? "FFFFFF" : LIGHTGREY },
+    shading: { type: ShadingType.CLEAR, color: "auto", fill: info ? "FFFFFF" : SURFACE },
     margins: { top: IMG_CELL_MARGIN, bottom: IMG_CELL_MARGIN, left: IMG_CELL_MARGIN, right: IMG_CELL_MARGIN },
     borders: cellBorders(info ? {} : {
       top: { style: BorderStyle.DASHED, size: 6, color: "9AA5AF" },
@@ -397,14 +395,14 @@ function originParagraphs(text) {
         return new Paragraph({
           spacing: { before: 20, after: 120 },
           children: [
-            new TextRun({ text: line.slice(0, idx + 1) + " ", bold: true, size: 18, font: "Arial", color: NAVY }),
-            new TextRun({ text: line.slice(idx + 1).trim(), size: 18, font: "Arial", color: DARKTEXT }),
+            new TextRun({ text: line.slice(0, idx + 1) + " ", bold: true, size: 18, font: FONT_BODY, color: NAVY }),
+            new TextRun({ text: line.slice(idx + 1).trim(), size: 18, font: FONT_BODY, color: DARKTEXT }),
           ],
         });
       }
       return new Paragraph({
         spacing: { before: 20, after: 120 },
-        children: [new TextRun({ text: line, size: 18, font: "Arial", color: DARKTEXT })],
+        children: [new TextRun({ text: line, size: 18, font: FONT_BODY, color: DARKTEXT })],
       });
     });
 }
@@ -414,13 +412,13 @@ const descripcionG54 = originParagraphs(ORIGIN_TEXT);
 const metodoToqueo = [
   new Paragraph({
     spacing: { after: 40 },
-    children: [new TextRun({ text: "Método recomendado: ", bold: true, size: 18, font: "Arial" }),
-               new TextRun({ text: "[Ej: Buscador de bordes manual para caras planas accesibles / Sonda de medición para geometrías curvas o de difícil acceso]", size: 18, font: "Arial", italics: true, color: STEEL })],
+    children: [new TextRun({ text: "Método recomendado: ", bold: true, size: 18, font: FONT_BODY }),
+               new TextRun({ text: "[Ej: Buscador de bordes manual para caras planas accesibles / Sonda de medición para geometrías curvas o de difícil acceso]", size: 18, font: FONT_BODY, italics: true, color: STEEL })],
   }),
   new Paragraph({
     spacing: { after: 40 },
-    children: [new TextRun({ text: "Justificación técnica: ", bold: true, size: 18, font: "Arial" }),
-               new TextRun({ text: "[Se genera automáticamente según geometría de la pieza, tolerancia requerida y accesibilidad — ej: \"Se recomienda sonda por la dureza del material (62 HRC) y el riesgo de desgaste/imprecisión del buscador de bordes manual sobre superficie templada\"]", size: 18, font: "Arial" })],
+    children: [new TextRun({ text: "Justificación técnica: ", bold: true, size: 18, font: FONT_BODY }),
+               new TextRun({ text: "[Se genera automáticamente según geometría de la pieza, tolerancia requerida y accesibilidad — ej: \"Se recomienda sonda por la dureza del material (62 HRC) y el riesgo de desgaste/imprecisión del buscador de bordes manual sobre superficie templada\"]", size: 18, font: FONT_BODY })],
   }),
 ];
 
@@ -428,18 +426,18 @@ const metodoToqueo = [
 const notaRefrigeracion = [
   new Paragraph({
     spacing: { after: 40 },
-    children: [new TextRun({ text: "Herramienta corta (207342-12) — 24 mm cono térmico: ", bold: true, size: 17, font: "Arial" }),
-               new TextRun({ text: "CON refrigerante (corte húmedo aprobado por fabricante).", size: 17, font: "Arial" })],
+    children: [new TextRun({ text: "Herramienta corta (207342-12) — 24 mm cono térmico: ", bold: true, size: 17, font: FONT_BODY }),
+               new TextRun({ text: "CON refrigerante (corte húmedo aprobado por fabricante).", size: 17, font: FONT_BODY })],
   }),
   new Paragraph({
     spacing: { after: 40 },
-    children: [new TextRun({ text: "Herramienta larga Diabolo HPC (207424-12, 120 mm): ", bold: true, size: 17, font: "Arial" }),
-               new TextRun({ text: "SIN refrigerante — corte en seco OBLIGATORIO según ficha técnica del fabricante, sin excepciones.", size: 17, font: "Arial", bold: true, color: "B00020" })],
+    children: [new TextRun({ text: "Herramienta larga Diabolo HPC (207424-12, 120 mm): ", bold: true, size: 17, font: FONT_BODY }),
+               new TextRun({ text: "SIN refrigerante — corte en seco OBLIGATORIO según ficha técnica del fabricante, sin excepciones.", size: 17, font: FONT_BODY, bold: true, color: "B00020" })],
   }),
   new Paragraph({
     spacing: { after: 40 },
-    children: [new TextRun({ text: "Nota para esta operación: ", bold: true, size: 17, font: "Arial" }),
-               new TextRun({ text: "[Especificar aquí si la fase actual usa herramienta corta, larga, o ambas, y confirmar el estado de refrigerante en el arranque del programa]", size: 17, font: "Arial", italics: true, color: STEEL })],
+    children: [new TextRun({ text: "Nota para esta operación: ", bold: true, size: 17, font: FONT_BODY }),
+               new TextRun({ text: "[Especificar aquí si la fase actual usa herramienta corta, larga, o ambas, y confirmar el estado de refrigerante en el arranque del programa]", size: 17, font: FONT_BODY, italics: true, color: STEEL })],
   }),
 ];
 
@@ -458,7 +456,7 @@ const checklistParas = checklistItems.map(item =>
   new Paragraph({
     numbering: { reference: "checklist", level: 0 },
     spacing: { after: 60 },
-    children: [new TextRun({ text: item, size: 18, font: "Arial" })],
+    children: [new TextRun({ text: item, size: 18, font: FONT_BODY })],
   })
 );
 
@@ -473,10 +471,10 @@ function firmaBlock(titulo) {
     borders: cellBorders({ top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }),
     margins: { top: 240, bottom: 0, left: 0, right: 240 },
     children: [
-      new Paragraph({ spacing: { after: 380 }, children: [new TextRun({ text: titulo, bold: true, size: 17, font: "Arial", color: NAVY })] }),
-      new Paragraph({ border: { top: { style: BorderStyle.SINGLE, size: 4, color: MIDGREY } }, children: [new TextRun({ text: "" })] }),
-      new Paragraph({ spacing: { before: 50 }, children: [new TextRun({ text: "Nombre y firma", size: 14, font: "Arial", color: STEEL, italics: true })] }),
-      new Paragraph({ spacing: { before: 120 }, children: [new TextRun({ text: "Fecha: ______________", size: 14, font: "Arial", color: STEEL })] }),
+      new Paragraph({ spacing: { after: 380 }, children: [new TextRun({ text: titulo, bold: true, size: 17, font: FONT_BODY, color: NAVY })] }),
+      new Paragraph({ border: { top: { style: BorderStyle.SINGLE, size: 4, color: RULE } }, children: [new TextRun({ text: "" })] }),
+      new Paragraph({ spacing: { before: 50 }, children: [new TextRun({ text: "Nombre y firma", size: 14, font: FONT_BODY, color: STEEL, italics: true })] }),
+      new Paragraph({ spacing: { before: 120 }, children: [new TextRun({ text: "Fecha: ______________", size: 14, font: FONT_BODY, color: STEEL })] }),
     ],
   });
 }
@@ -491,18 +489,18 @@ const firmasTable = new Table({
 const footer = new Footer({
   children: [
     new Paragraph({
-      border: { top: { style: BorderStyle.SINGLE, size: 4, color: MIDGREY } },
+      border: { top: { style: BorderStyle.SINGLE, size: 4, color: RULE } },
       spacing: { before: 60 },
       tabStops: [{ type: TabStopType.RIGHT, position: PAGE_W - 2 * MARGIN }],
       children: [
-        new TextRun({ text: "MAG Industries — Servicios de ingeniería CAD/CAM", size: 14, font: "Arial", color: STEEL }),
+        new TextRun({ text: "MAG Industries — Servicios de ingeniería CAD/CAM", size: 14, font: FONT_BODY, color: STEEL }),
         new TextRun({ text: "\t", size: 14 }),
-        new TextRun({ text: "info@magindustries.es · +34 635 013 953", size: 14, font: "Arial", color: STEEL }),
+        new TextRun({ text: "info@magindustries.es · +34 635 013 953", size: 14, font: FONT_BODY, color: STEEL }),
       ],
     }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
-      children: [new TextRun({ text: "Documento de uso interno de taller y evidencia técnica de proceso. Prohibida su distribución sin autorización expresa de MAG Industries.", size: 11, font: "Arial", italics: true, color: "9AA5AF" })],
+      children: [new TextRun({ text: "Documento de uso interno de taller y evidencia técnica de proceso. Prohibida su distribución sin autorización expresa de MAG Industries.", size: 11, font: FONT_BODY, italics: true, color: "9AA5AF" })],
     }),
   ],
 });
@@ -550,13 +548,13 @@ const doc = new Document({
         sectionHeader("SISTEMA DE SUJECIÓN"),
         new Paragraph({
           spacing: { after: 40 },
-          children: [new TextRun({ text: "Utillaje: ", bold: true, size: 18, font: "Arial" }),
-                     new TextRun({ text: FIXTURE || "[Ej: mordaza Lang Makro-Grip / bridas / utillaje a medida — especificar modelo]", size: 18, font: "Arial", italics: !FIXTURE, color: FIXTURE ? DARKTEXT : STEEL })],
+          children: [new TextRun({ text: "Utillaje: ", bold: true, size: 18, font: FONT_BODY }),
+                     new TextRun({ text: FIXTURE || "[Ej: mordaza Lang Makro-Grip / bridas / utillaje a medida — especificar modelo]", size: 18, font: FONT_BODY, italics: !FIXTURE, color: FIXTURE ? DARKTEXT : STEEL })],
         }),
         new Paragraph({
           spacing: { after: 40 },
-          children: [new TextRun({ text: "Par de apriete / observaciones: ", bold: true, size: 18, font: "Arial" }),
-                     new TextRun({ text: "[__]", size: 18, font: "Arial" })],
+          children: [new TextRun({ text: "Par de apriete / observaciones: ", bold: true, size: 18, font: FONT_BODY }),
+                     new TextRun({ text: "[__]", size: 18, font: FONT_BODY })],
         }),
         sectionHeader("REFRIGERACIÓN"),
         ...notaRefrigeracion,

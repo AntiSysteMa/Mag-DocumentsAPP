@@ -64,12 +64,12 @@ const RIBBON = v(OP.ribbon, "ENFOQUE 100% EN RESULTADOS MEDIBLES — NO FACTURAM
 const CTA_TITLE = v(OP.cta_title, "¿Tienes un proyecto atascado?");
 const CTA_SUB = v(OP.cta_sub, "Hablemos — sin compromiso.");
 
-const NAVY = "1B2A41";
-const ORANGE = "E07B39";
-const STEEL = "5A6B7A";
-const LIGHTGREY = "F2F2F2";
-const CARDGREY = "EDEFF1";
-const DARKTEXT = "1A1A1A";
+// Identidad visual (fuentes y paleta): ver generators/brand.js.
+const {
+  NAVY, GOLD, GOLD_SOFT, TEXT_ON_DARK, DARKTEXT, STEEL, STEEL_ON_DARK,
+  SURFACE, SURFACE_ALT, FONT_TITLE, FONT_BODY, FONT_BODY_SB, FS, TRACK,
+  titleRun, labelRun, bodyRun,
+} = require("./brand");
 
 const PAGE_W = 11906, PAGE_H = 16838, MARGIN = 700;
 const CONTENT_W = PAGE_W - 2 * MARGIN; // 10506
@@ -96,10 +96,13 @@ const heroBand = new Table({
         borders: noBorders(),
         verticalAlign: VerticalAlign.CENTER,
         children: [
-          new Paragraph({ children: [new TextRun({ text: "MAG INDUSTRIES", bold: true, size: 46, font: "Arial", color: "FFFFFF" })] }),
-          new Paragraph({ spacing: { after: 220 }, children: [new TextRun({ text: "Servicios de ingeniería CAD/CAM", italics: true, size: 24, font: "Arial", color: "C9D2DC" })] }),
-          new Paragraph({ spacing: { before: 100 }, children: [new TextRun({ text: TAGLINE_1, bold: true, size: 46, font: "Arial", color: "FFFFFF" })] }),
-          new Paragraph({ children: [new TextRun({ text: TAGLINE_2, bold: true, size: 46, font: "Arial", color: ORANGE })] }),
+          // Jerarquía: la marca hace de antetítulo (pequeña y muy tracked,
+          // porque el logo grande ya está a la derecha) y el peso visual se
+          // lo llevan las dos líneas de tagline en stencil.
+          new Paragraph({ children: [new TextRun(labelRun("MAG INDUSTRIES", 20, GOLD))] }),
+          new Paragraph({ spacing: { after: 200 }, children: [new TextRun(bodyRun("Servicios de ingeniería CAD/CAM", 20, STEEL_ON_DARK))] }),
+          new Paragraph({ spacing: { before: 80 }, children: [new TextRun(titleRun(TAGLINE_1, 40, TEXT_ON_DARK, { characterSpacing: TRACK.hero }))] }),
+          new Paragraph({ children: [new TextRun(titleRun(TAGLINE_2, 40, GOLD, { characterSpacing: TRACK.hero }))] }),
         ],
       }),
       new TableCell({
@@ -118,14 +121,22 @@ const heroBand = new Table({
 const subhead = new Paragraph({
   spacing: { before: 140, after: 60 },
   alignment: AlignmentType.CENTER,
-  children: [new TextRun({ text: SUBHEAD, size: 24, font: "Arial", color: DARKTEXT, italics: true })],
+  // Sin cursiva: a este tamaño y centrada, la redonda se lee mejor y da un
+  // aire más sobrio que la cursiva anterior.
+  children: [new TextRun(bodyRun(SUBHEAD, 21, DARKTEXT))],
 });
 
+// Franja de promesa. Sin emoji (la marca no los usa) y encerrada entre dos
+// filetes dorados finos, que es lo que le da el aire de sello.
 const ribbon = new Paragraph({
-  spacing: { before: 40, after: 140 },
+  spacing: { before: 60, after: 150 },
   alignment: AlignmentType.CENTER,
-  shading: { type: ShadingType.CLEAR, color: "auto", fill: CARDGREY },
-  children: [new TextRun({ text: "🎯  " + RIBBON, bold: true, size: 20, font: "Arial", color: NAVY })],
+  shading: { type: ShadingType.CLEAR, color: "auto", fill: SURFACE_ALT },
+  border: {
+    top: { style: BorderStyle.SINGLE, size: 6, color: GOLD, space: 6 },
+    bottom: { style: BorderStyle.SINGLE, size: 6, color: GOLD, space: 6 },
+  },
+  children: [new TextRun(labelRun(RIBBON, 17, NAVY))],
 });
 
 // ---------- VALUE CARDS (2x2) ----------
@@ -153,7 +164,7 @@ function valueCardInner(iconFile, titulo, texto) {
     rows: [new TableRow({
       children: [new TableCell({
         width: { size: CARD_W, type: WidthType.DXA },
-        shading: { type: ShadingType.CLEAR, color: "auto", fill: CARDGREY },
+        shading: { type: ShadingType.CLEAR, color: "auto", fill: SURFACE_ALT },
         borders: noBorders(),
         margins: { top: 0, bottom: 0, left: 0, right: 0 },
         children: [new Table({
@@ -171,8 +182,8 @@ function valueCardInner(iconFile, titulo, texto) {
                 width: { size: TEXT_COL_W, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(),
                 margins: { top: 200, bottom: 200, left: 60, right: 220 },
                 children: [
-                  new Paragraph({ spacing: { after: 70 }, children: [new TextRun({ text: titulo, bold: true, size: 23, font: "Arial", color: NAVY })] }),
-                  new Paragraph({ children: [new TextRun({ text: texto, size: 20, font: "Arial", color: DARKTEXT })] }),
+                  new Paragraph({ spacing: { after: 80 }, children: [new TextRun(labelRun(titulo, 18, NAVY))] }),
+                  new Paragraph({ children: [new TextRun(bodyRun(texto, 18, DARKTEXT))] }),
                 ],
               }),
             ],
@@ -193,11 +204,47 @@ const valueGridFixed = new Table({
   ],
 });
 
+// ---------- ALCANCE TÉCNICO ----------
+// Franja fija, NO personalizable por sector, y es a propósito.
+//
+// Las cuatro tarjetas de arriba se adaptan al sector del destinatario, y ahí
+// está el riesgo: un perfil centrado en, por ejemplo, perfiles 2D deja el
+// folleto dando a entender que MAG solo hace 2D. Esta línea es el contrapeso
+// — el gancho puede ser específico, pero el rango completo de capacidad se
+// ve siempre. Por eso no lee de `profile`: para que ningún perfil pueda
+// recortarla sin querer.
+const CAPABILITIES = [
+  "Perfiles y contornos 2D",
+  "Piezas 3D",
+  "5 ejes continuos",
+  "Utillaje y postizos",
+  "Documentación y trazabilidad",
+];
+
+const alcanceTitle = new Paragraph({
+  spacing: { before: 40, after: 60 },
+  alignment: AlignmentType.CENTER,
+  children: [new TextRun(labelRun("ALCANCE TÉCNICO", 15, GOLD_SOFT))],
+});
+
+const alcanceLine = new Paragraph({
+  spacing: { after: 40 },
+  alignment: AlignmentType.CENTER,
+  children: CAPABILITIES.flatMap((cap, i) => (
+    i === 0
+      ? [new TextRun({ text: cap, size: 17, font: FONT_BODY_SB, color: NAVY })]
+      : [
+        new TextRun({ text: "   ·   ", size: 17, font: FONT_BODY_SB, color: GOLD }),
+        new TextRun({ text: cap, size: 17, font: FONT_BODY_SB, color: NAVY }),
+      ]
+  )),
+});
+
 // ---------- CÓMO FUNCIONA ----------
 const comoFuncionaTitle = new Paragraph({
   spacing: { before: 150, after: 100 },
   alignment: AlignmentType.CENTER,
-  children: [new TextRun({ text: "¿CÓMO FUNCIONA?", bold: true, size: 28, font: "Arial", color: NAVY })],
+  children: [new TextRun(titleRun("¿Cómo funciona?", 26, NAVY))],
 });
 
 function pasoCell(num, texto) {
@@ -208,10 +255,10 @@ function pasoCell(num, texto) {
     children: [
       new Paragraph({
         alignment: AlignmentType.CENTER,
-        shading: { type: ShadingType.CLEAR, color: "auto", fill: ORANGE },
-        children: [new TextRun({ text: "  " + num + "  ", bold: true, size: 34, font: "Arial", color: "FFFFFF" })],
+        shading: { type: ShadingType.CLEAR, color: "auto", fill: GOLD },
+        children: [new TextRun(titleRun("  " + num + "  ", 30, NAVY))],
       }),
-      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100 }, children: [new TextRun({ text: texto, size: 21, font: "Arial", color: DARKTEXT })] }),
+      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 110 }, children: [new TextRun(bodyRun(texto, 18, DARKTEXT))] }),
     ],
   });
 }
@@ -230,19 +277,19 @@ function refCell(titulo, detalle) {
   return new TableCell({
     width: { size: REF_COL_W, type: WidthType.DXA },
     borders: noBorders(),
-    shading: { type: ShadingType.CLEAR, color: "auto", fill: LIGHTGREY },
+    shading: { type: ShadingType.CLEAR, color: "auto", fill: SURFACE },
     margins: { top: 70, bottom: 70, left: 130, right: 130 },
     verticalAlign: VerticalAlign.TOP,
     children: [
-      new Paragraph({ spacing: { after: 30 }, children: [new TextRun({ text: titulo, bold: true, size: 17, font: "Arial", color: NAVY })] }),
-      new Paragraph({ children: [new TextRun({ text: detalle, size: 15, font: "Arial", color: STEEL, italics: true })] }),
+      new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: titulo, size: 15, font: FONT_BODY_SB, color: NAVY })] }),
+      new Paragraph({ children: [new TextRun(bodyRun(detalle, 15, STEEL))] }),
     ],
   });
 }
 const referenciasTitle = new Paragraph({
   spacing: { before: 130, after: 60 },
   alignment: AlignmentType.CENTER,
-  children: [new TextRun({ text: "TRABAJOS SIMILARES", bold: true, size: 20, font: "Arial", color: NAVY })],
+  children: [new TextRun(labelRun("TRABAJOS SIMILARES", 16, GOLD_SOFT))],
 });
 const referenciasTable = new Table({
   width: { size: CONTENT_W, type: WidthType.DXA },
@@ -267,10 +314,10 @@ const ctaBanner = new Table({
         margins: { top: 240, bottom: 240, left: 320, right: 200 },
         borders: noBorders(),
         children: [
-          new Paragraph({ children: [new TextRun({ text: CTA_TITLE, bold: true, size: 27, font: "Arial", color: "FFFFFF" })] }),
-          new Paragraph({ spacing: { before: 60, after: 160 }, children: [new TextRun({ text: CTA_SUB, size: 22, font: "Arial", color: "C9D2DC" })] }),
-          new Paragraph({ children: [new TextRun({ text: "📞 +34 635 013 953", bold: true, size: 34, font: "Arial", color: ORANGE })] }),
-          new Paragraph({ spacing: { before: 60 }, children: [new TextRun({ text: "info@magindustries.es", size: 20, font: "Arial", color: "FFFFFF" })] }),
+          new Paragraph({ children: [new TextRun(titleRun(CTA_TITLE, 26, TEXT_ON_DARK))] }),
+          new Paragraph({ spacing: { before: 80, after: 170 }, children: [new TextRun(bodyRun(CTA_SUB, 20, STEEL_ON_DARK))] }),
+          new Paragraph({ children: [new TextRun({ text: "+34 635 013 953", size: 32, font: FONT_BODY_SB, color: GOLD, characterSpacing: 6 })] }),
+          new Paragraph({ spacing: { before: 70 }, children: [new TextRun(bodyRun("info@magindustries.es", 19, TEXT_ON_DARK))] }),
         ],
       }),
       new TableCell({
@@ -281,7 +328,7 @@ const ctaBanner = new Table({
         borders: noBorders(),
         children: [
           new Paragraph({ alignment: AlignmentType.CENTER, children: [qrImage] }),
-          new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80 }, children: [new TextRun({ text: "Escanea y escribe por WhatsApp", size: 13, font: "Arial", italics: true, color: STEEL })] }),
+          new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 90 }, children: [new TextRun(labelRun("ESCRÍBENOS POR WHATSAPP", 14, STEEL))] }),
         ],
       }),
     ],
@@ -298,6 +345,8 @@ const doc = new Document({
         subhead,
         ribbon,
         valueGridFixed,
+        alcanceTitle,
+        alcanceLine,
         comoFuncionaTitle,
         pasosTable,
         referenciasTitle,

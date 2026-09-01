@@ -5,11 +5,10 @@ const {
   ImageRun, VerticalAlign, PageOrientation, VerticalMergeType,
 } = require("docx");
 
-const NAVY = "1B2A41";
-const ORANGE = "E07B39";
-const STEEL = "5A6B7A";
-const CARDGREY = "EDEFF1";
-const DARKTEXT = "1A1A1A";
+// Identidad visual (fuentes y paleta): ver generators/brand.js.
+const {
+  NAVY, GOLD, TEXT_ON_DARK, DARKTEXT, STEEL, SURFACE_ALT, FONT_TITLE, FONT_BODY, FONT_BODY_SB, FS, TRACK, titleRun, labelRun,
+} = require("./brand");
 
 const PAGE_W = 11906, PAGE_H = 16838, MARGIN = 700;
 const CONTENT_W = PAGE_W - 2 * MARGIN; // 10506
@@ -30,8 +29,8 @@ const headerTable = new Table({
       new TableCell({
         width: { size: CONTENT_W - 900, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(),
         children: [
-          new Paragraph({ children: [new TextRun({ text: "MAG INDUSTRIES", bold: true, size: 26, font: "Arial", color: NAVY })] }),
-          new Paragraph({ children: [new TextRun({ text: "Servicios de ingeniería CAD/CAM", italics: true, size: 15, font: "Arial", color: STEEL })] }),
+          new Paragraph({ children: [new TextRun(titleRun("MAG INDUSTRIES", 26, NAVY))] }),
+          new Paragraph({ children: [new TextRun({ text: "Servicios de ingeniería CAD/CAM", size: 15, font: FONT_BODY, color: STEEL, characterSpacing: 14 })] }),
         ],
       }),
     ],
@@ -41,12 +40,12 @@ const headerTable = new Table({
 const tituloPrincipal = new Paragraph({
   alignment: AlignmentType.CENTER,
   spacing: { before: 260, after: 60 },
-  children: [new TextRun({ text: "NUESTRO PROCESO DE INGENIERÍA", bold: true, size: 32, font: "Arial", color: NAVY })],
+  children: [new TextRun(labelRun("NUESTRO PROCESO DE INGENIERÍA", 32, NAVY))],
 });
 const subtituloPrincipal = new Paragraph({
   alignment: AlignmentType.CENTER,
   spacing: { after: 320 },
-  children: [new TextRun({ text: "De tu plano a la pieza terminada, con trazabilidad completa en cada paso.", italics: true, size: 19, font: "Arial", color: STEEL })],
+  children: [new TextRun({ text: "De tu plano a la pieza terminada, con trazabilidad completa en cada paso.", italics: true, size: 19, font: FONT_BODY, color: STEEL })],
 });
 
 // ---------- TIMELINE ----------
@@ -75,16 +74,16 @@ function buildTimelineRow(num, iconFile, titulo, texto, isFirst) {
         margins: { top: 40, bottom: 220, left: 40, right: 40 },
         children: [
           new Paragraph({ alignment: AlignmentType.CENTER, children: [icon] }),
-          new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 50 }, children: [new TextRun({ text: "PASO " + num, bold: true, size: 14, font: "Arial", color: ORANGE })] }),
+          new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 50 }, children: [new TextRun({ text: "PASO " + num, bold: true, size: 14, font: FONT_BODY, color: GOLD })] }),
         ],
       }),
       new TableCell({
         width: { size: TEXT_W, type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, borders: noBorders(),
-        shading: { type: ShadingType.CLEAR, color: "auto", fill: CARDGREY },
+        shading: { type: ShadingType.CLEAR, color: "auto", fill: SURFACE_ALT },
         margins: { top: 160, bottom: 160, left: 220, right: 220 },
         children: [
-          new Paragraph({ spacing: { after: 70 }, children: [new TextRun({ text: titulo, bold: true, size: 22, font: "Arial", color: NAVY })] }),
-          new Paragraph({ children: [new TextRun({ text: texto, size: 19, font: "Arial", color: DARKTEXT })] }),
+          new Paragraph({ spacing: { after: 70 }, children: [new TextRun({ text: titulo, bold: true, size: 22, font: FONT_BODY, color: NAVY })] }),
+          new Paragraph({ children: [new TextRun({ text: texto, size: 19, font: FONT_BODY, color: DARKTEXT })] }),
         ],
       }),
     ],
@@ -119,8 +118,8 @@ const closingBanner = new Table({
       margins: { top: 220, bottom: 220, left: 300, right: 300 },
       borders: noBorders(),
       children: [
-        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Detrás de cada pieza, un proceso de ingeniería documentado.", bold: true, size: 21, font: "Arial", color: "FFFFFF" })] }),
-        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100 }, children: [new TextRun({ text: "MAG Industries · Servicios de ingeniería CAD/CAM · info@magindustries.es · +34 635 013 953", size: 15, font: "Arial", color: "C9D2DC" })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Detrás de cada pieza, un proceso de ingeniería documentado.", bold: true, size: 21, font: FONT_BODY, color: "FFFFFF" })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100 }, children: [new TextRun({ text: "MAG Industries · Servicios de ingeniería CAD/CAM · info@magindustries.es · +34 635 013 953", size: 15, font: FONT_BODY, color: "C9D2DC" })] }),
       ],
     })],
   })],

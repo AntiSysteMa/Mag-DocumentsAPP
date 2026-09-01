@@ -1,6 +1,48 @@
 # PROJECT_STATE.md — MAG Industries Document Generator
 
-*Última actualización: sesión del 01/09/2026*
+*Última actualización: sesión del 01/09/2026 (tipografía de marca)*
+
+---
+
+## Sesión 01/09/2026 — Tipografía de marca y one-pager de Espumas del Vallès
+
+Origen: el borrador del one-pager para **Espumas del Vallès** (fabricante de espumas
+técnicas en Polinyà, lead entrante por la oficina técnica externa CAD/CAM) tenía tres
+problemas de tono y forma. Se corrigieron los tres, más la identidad visual completa.
+
+**Tipografía y paleta (`generators/brand.js`, nuevo).** Única fuente de verdad de la
+identidad: los 6 generadores importan de ahí y ninguno define ya sus propios colores.
+Se aplicó la skill `mi-marca`: `Saira Stencil One` en titulares, `Barlow` en el resto
+(169 declaraciones `font: "Arial"` sustituidas), y la paleta navy profundo `#041A25` +
+dorado `#D4AF37`, con el verde `#2EE6A8` reservado a estados de validación.
+Se documentó como excepción que `REDWARN` y `CAT_*` quedan fuera de paleta porque
+codifican información (aviso de corte en seco, leyenda de 5 categorías de cota).
+
+**Las fuentes hay que instalarlas.** Van incluidas en `assets/fonts/` (licencia OFL) y
+se instalan con `scripts/instalar_fuentes.ps1`. Solo las necesita el equipo que ABRE el
+`.docx`; generar no las necesita, así que Streamlit Cloud no se ve afectado. Al cliente
+se le manda PDF, que lleva las fuentes incrustadas.
+
+**El problema de «5 tipos de letra» no era del código.** Se verificó: las 169
+declaraciones eran todas `Arial`. La mezcla venía de la sustitución de fuentes al
+previsualizar en otro entorno, como sospechaba el resumen de sesión.
+
+**Tono (`core/sectors.py`).** El patrón que molestaba era abrir señalando la carencia
+del cliente («¿Tienes un proyecto atascado?», «cuando el tiempo aprieta», «un cuello de
+botella en serie»). Reescritos los 6 sectores para abrir sobre capacidad y resultado.
+Fuera los emojis `🎯` y `📞` del one-pager (`mi-marca` los prohíbe).
+
+**Rango de capacidad siempre visible (`build7.js`).** Franja nueva «ALCANCE TÉCNICO»
+—perfiles 2D · piezas 3D · 5 ejes continuos · utillaje · documentación— **fija y no
+personalizable por sector**, a propósito: era el fallo de la v2, donde adaptar el
+folleto a los perfiles 2D del cliente daba a entender que MAG solo hace 2D.
+
+**Ficha de Espumas del Vallès** en `data/clients.json` (gitignored), sector base
+`automocion`. Las referencias son descriptivas de servicio, **sin cifras de resultado
+inventadas** — hay que sustituirlas por casos reales antes de enviar.
+
+**Verificado en Word real** (COM, no a ojo): one-pager 1 hoja en los 6 sectores y en la
+versión de Espumas; Hoja G54 con datos generales y las 4 vistas en la página 1.
 
 ---
 

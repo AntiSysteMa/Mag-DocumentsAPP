@@ -38,13 +38,10 @@ const DOC_DATE = v(D.doc_date, (() => {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 })());
 
-const NAVY = "1B2A41";
-const ORANGE = "E07B39";
-const STEEL = "5A6B7A";
-const LIGHTGREY = "F2F2F2";
-const CARDGREY = "EDEFF1";
-const MIDGREY = "D9D9D9";
-const DARKTEXT = "1A1A1A";
+// Identidad visual (fuentes y paleta): ver generators/brand.js.
+const {
+  NAVY, GOLD, TEXT_ON_DARK, DARKTEXT, STEEL, SURFACE, SURFACE_ALT, RULE, FONT_TITLE, FONT_BODY, FONT_BODY_SB, FS, TRACK, titleRun, labelRun,
+} = require("./brand");
 
 const PAGE_W = 11906; // A4 portrait DXA
 const PAGE_H = 16838;
@@ -61,8 +58,8 @@ function sectionHeader(text) {
     spacing: { before: 300, after: 160 },
     keepNext: true,
     shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY },
-    border: { left: { style: BorderStyle.SINGLE, size: 36, color: ORANGE, space: 4 } },
-    children: [new TextRun({ text: "   " + text, bold: true, color: "FFFFFF", size: 24, font: "Arial" })],
+    border: { left: { style: BorderStyle.SINGLE, size: 36, color: GOLD, space: 4 } },
+    children: [new TextRun({ text: "   " + text, bold: true, color: "FFFFFF", size: 24, font: FONT_BODY })],
   });
 }
 
@@ -78,17 +75,17 @@ const headerTable = new Table({
       new TableCell({
         width: { size: 5200, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(),
         children: [
-          new Paragraph({ children: [new TextRun({ text: "MAG INDUSTRIES", bold: true, size: 32, font: "Arial", color: NAVY })] }),
-          new Paragraph({ children: [new TextRun({ text: "Servicios de ingeniería CAD/CAM", italics: true, size: 18, font: "Arial", color: STEEL })] }),
+          new Paragraph({ children: [new TextRun(titleRun("MAG INDUSTRIES", 32, NAVY))] }),
+          new Paragraph({ children: [new TextRun({ text: "Servicios de ingeniería CAD/CAM", size: 18, font: FONT_BODY, color: STEEL, characterSpacing: 14 })] }),
         ],
       }),
       new TableCell({
         width: { size: 4006, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(),
         children: [
-          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "PROPUESTA COMERCIAL", bold: true, size: 22, font: "Arial", color: DARKTEXT })] }),
-          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Doc. Nº: ", size: 15, font: "Arial", color: STEEL }), new TextRun({ text: v(D.doc_number, "MAG-PROP-001"), size: 15, font: "Arial", bold: true })] }),
-          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Fecha: ", size: 15, font: "Arial", color: STEEL }), new TextRun({ text: DOC_DATE, size: 15, font: "Arial" })] }),
-          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Válida hasta: ", size: 15, font: "Arial", color: STEEL }), new TextRun({ text: v(D.valid_until, "30 días desde la fecha de este documento"), size: 15, font: "Arial", bold: true })] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun(labelRun("PROPUESTA COMERCIAL", 22, DARKTEXT))] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Doc. Nº: ", size: 15, font: FONT_BODY, color: STEEL }), new TextRun({ text: v(D.doc_number, "MAG-PROP-001"), size: 15, font: FONT_BODY, bold: true })] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Fecha: ", size: 15, font: FONT_BODY, color: STEEL }), new TextRun({ text: DOC_DATE, size: 15, font: FONT_BODY })] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Válida hasta: ", size: 15, font: FONT_BODY, color: STEEL }), new TextRun({ text: v(D.valid_until, "30 días desde la fecha de este documento"), size: 15, font: FONT_BODY, bold: true })] }),
         ],
       }),
     ],
@@ -100,8 +97,8 @@ function labelValue(label, value, opts = {}) {
   return new Paragraph({
     spacing: { after: 60 },
     children: [
-      new TextRun({ text: label + ": ", bold: true, size: 20, font: "Arial", color: STEEL }),
-      new TextRun({ text: value, size: 20, font: "Arial", color: DARKTEXT, italics: !!opts.italic }),
+      new TextRun({ text: label + ": ", bold: true, size: 20, font: FONT_BODY, color: STEEL }),
+      new TextRun({ text: value, size: 20, font: FONT_BODY, color: DARKTEXT, italics: !!opts.italic }),
     ],
   });
 }
@@ -115,11 +112,11 @@ const destinatarioBlock = [
 // ---------- POSICIONAMIENTO ----------
 const posicionamiento = new Paragraph({
   spacing: { before: 100, after: 200 },
-  border: { left: { style: BorderStyle.SINGLE, size: 24, color: ORANGE, space: 8 } },
+  border: { left: { style: BorderStyle.SINGLE, size: 24, color: GOLD, space: 8 } },
   children: [
     new TextRun({
       text: "MAG Industries no factura horas: entrega piezas terminadas, con trazabilidad completa de proceso y control dimensional. Trabajamos como un socio técnico de tu producción — no como un proveedor puntual — priorizando fiabilidad de entrega y calidad certificable frente al cliente final.",
-      italics: true, size: 21, font: "Arial", color: DARKTEXT,
+      italics: true, size: 21, font: FONT_BODY, color: DARKTEXT,
     }),
   ],
 });
@@ -129,7 +126,7 @@ const alcanceParrafo = new Paragraph({
   spacing: { after: 160 },
   children: [new TextRun({
     text: v(D.scope_text, "[Describe aquí el alcance técnico del proyecto: proceso, material, máquina y qué incluye el trabajo.]"),
-    size: 21, font: "Arial", color: DARKTEXT, italics: !D.scope_text,
+    size: 21, font: FONT_BODY, color: DARKTEXT, italics: !D.scope_text,
   })],
 });
 
@@ -138,13 +135,13 @@ function specLabelCell(text, width) {
   return new TableCell({
     width: { size: width, type: WidthType.DXA }, shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY }, verticalAlign: VerticalAlign.CENTER,
     margins: { top: 80, bottom: 80, left: 140, right: 100 }, borders: cellBorders(),
-    children: [new Paragraph({ children: [new TextRun({ text, bold: true, color: "FFFFFF", size: 19, font: "Arial" })] })],
+    children: [new Paragraph({ children: [new TextRun({ text, bold: true, color: "FFFFFF", size: 19, font: FONT_BODY })] })],
   });
 }
 function specValueCell(text, width) {
   return new TableCell({
     width: { size: width, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, margins: { top: 80, bottom: 80, left: 140, right: 100 }, borders: cellBorders(), shading: { type: ShadingType.CLEAR, color: "auto", fill: "FFFFFF" },
-    children: [new Paragraph({ children: [new TextRun({ text, size: 19, font: "Arial", color: DARKTEXT })] })],
+    children: [new Paragraph({ children: [new TextRun({ text, size: 19, font: FONT_BODY, color: DARKTEXT })] })],
   });
 }
 const specL = 3000, specV = CONTENT_W - specL;
@@ -175,7 +172,7 @@ const entregablesItems = (Array.isArray(D.deliverables) && D.deliverables.length
 const entregablesParas = entregablesItems.map(t => new Paragraph({
   numbering: { reference: "entregables-list", level: 0 },
   spacing: { after: 70 },
-  children: [new TextRun({ text: t, size: 20, font: "Arial" })],
+  children: [new TextRun({ text: t, size: 20, font: FONT_BODY })],
 }));
 
 // ---------- CRONOGRAMA ----------
@@ -185,8 +182,8 @@ const cronoHeaderRow = new TableRow({ children: cronoHeaders.map((h, i) => specL
 function cronoRow(fase, dur, fill) {
   return new TableRow({
     children: [
-      new TableCell({ width: { size: cronoColW[0], type: WidthType.DXA }, borders: cellBorders(), shading: { type: ShadingType.CLEAR, color: "auto", fill }, margins: { top: 80, bottom: 80, left: 140, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: fase, size: 19, font: "Arial" })] })] }),
-      new TableCell({ width: { size: cronoColW[1], type: WidthType.DXA }, borders: cellBorders(), shading: { type: ShadingType.CLEAR, color: "auto", fill }, margins: { top: 80, bottom: 80, left: 140, right: 100 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: dur, size: 19, font: "Arial", bold: true })] })] }),
+      new TableCell({ width: { size: cronoColW[0], type: WidthType.DXA }, borders: cellBorders(), shading: { type: ShadingType.CLEAR, color: "auto", fill }, margins: { top: 80, bottom: 80, left: 140, right: 100 }, children: [new Paragraph({ children: [new TextRun({ text: fase, size: 19, font: FONT_BODY })] })] }),
+      new TableCell({ width: { size: cronoColW[1], type: WidthType.DXA }, borders: cellBorders(), shading: { type: ShadingType.CLEAR, color: "auto", fill }, margins: { top: 80, bottom: 80, left: 140, right: 100 }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: dur, size: 19, font: FONT_BODY, bold: true })] })] }),
     ],
   });
 }
@@ -202,8 +199,8 @@ const cronogramaTable = new Table({
   columnWidths: cronoColW,
   rows: [
     cronoHeaderRow,
-    ...fases.map((f, i) => cronoRow(v(f.fase, "—"), v(f.duracion, "—"), i % 2 === 0 ? "FFFFFF" : LIGHTGREY)),
-    cronoRow("PLAZO TOTAL ESTIMADO", v(D.total_duration, "6 – 8 días laborables"), fases.length % 2 === 0 ? "FFFFFF" : LIGHTGREY),
+    ...fases.map((f, i) => cronoRow(v(f.fase, "—"), v(f.duracion, "—"), i % 2 === 0 ? "FFFFFF" : SURFACE)),
+    cronoRow("PLAZO TOTAL ESTIMADO", v(D.total_duration, "6 – 8 días laborables"), fases.length % 2 === 0 ? "FFFFFF" : SURFACE),
   ],
 });
 
@@ -226,9 +223,9 @@ const inversionBox = new Table({
     children: [new TableCell({
       width: { size: CONTENT_W, type: WidthType.DXA }, shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY }, margins: { top: 220, bottom: 220, left: 300, right: 300 },
       children: [
-        new Paragraph({ alignment: AlignmentType.CENTER, keepLines: true, keepNext: true, children: [new TextRun({ text: PRICE_LABEL, bold: true, size: 20, font: "Arial", color: "FFFFFF" })] }),
-        new Paragraph({ alignment: AlignmentType.CENTER, keepLines: true, keepNext: true, spacing: { before: 120 }, children: [new TextRun({ text: PRICE_TEXT, bold: true, size: 56, font: "Arial", color: ORANGE })] }),
-        new Paragraph({ alignment: AlignmentType.CENTER, keepLines: true, spacing: { before: 100 }, children: [new TextRun({ text: "Precio cerrado por el proyecto completo — no se factura por horas trabajadas. IVA no incluido.", italics: true, size: 17, font: "Arial", color: "D9D9D9" })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, keepLines: true, keepNext: true, children: [new TextRun({ text: PRICE_LABEL, bold: true, size: 20, font: FONT_BODY, color: "FFFFFF" })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, keepLines: true, keepNext: true, spacing: { before: 120 }, children: [new TextRun({ text: PRICE_TEXT, bold: true, size: 56, font: FONT_BODY, color: GOLD })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, keepLines: true, spacing: { before: 100 }, children: [new TextRun({ text: "Precio cerrado por el proyecto completo — no se factura por horas trabajadas. IVA no incluido.", italics: true, size: 17, font: FONT_BODY, color: "D9D9D9" })] }),
       ],
     })],
   })],
@@ -246,7 +243,7 @@ const condicionesItems = [
 const condicionesParas = condicionesItems.map(t => new Paragraph({
   numbering: { reference: "condiciones-list", level: 0 },
   spacing: { after: 70 },
-  children: [new TextRun({ text: t, size: 19, font: "Arial" })],
+  children: [new TextRun({ text: t, size: 19, font: FONT_BODY })],
 }));
 
 // ---------- ACEPTACIÓN ----------
@@ -256,10 +253,10 @@ function firmaBlock(titulo, width) {
     borders: noBorders(),
     margins: { top: 300, bottom: 0, left: 0, right: 200 },
     children: [
-      new Paragraph({ spacing: { after: 500 }, children: [new TextRun({ text: titulo, bold: true, size: 19, font: "Arial", color: NAVY })] }),
-      new Paragraph({ border: { top: { style: BorderStyle.SINGLE, size: 4, color: MIDGREY } }, children: [new TextRun({ text: "" })] }),
-      new Paragraph({ spacing: { before: 60 }, children: [new TextRun({ text: "Nombre y firma", size: 15, font: "Arial", color: STEEL, italics: true })] }),
-      new Paragraph({ spacing: { before: 160 }, children: [new TextRun({ text: "Fecha: ______________", size: 15, font: "Arial", color: STEEL })] }),
+      new Paragraph({ spacing: { after: 500 }, children: [new TextRun({ text: titulo, bold: true, size: 19, font: FONT_BODY, color: NAVY })] }),
+      new Paragraph({ border: { top: { style: BorderStyle.SINGLE, size: 4, color: RULE } }, children: [new TextRun({ text: "" })] }),
+      new Paragraph({ spacing: { before: 60 }, children: [new TextRun({ text: "Nombre y firma", size: 15, font: FONT_BODY, color: STEEL, italics: true })] }),
+      new Paragraph({ spacing: { before: 160 }, children: [new TextRun({ text: "Fecha: ______________", size: 15, font: FONT_BODY, color: STEEL })] }),
     ],
   });
 }
@@ -277,8 +274,8 @@ const REFS = (Array.isArray(P.references) && P.references.length) ? P.references
 const referenciasParas = REFS.map(r => new Paragraph({
   spacing: { after: 90 },
   children: [
-    new TextRun({ text: (Array.isArray(r) ? r[0] : "") + " — ", bold: true, size: 20, font: "Arial", color: NAVY }),
-    new TextRun({ text: Array.isArray(r) ? (r[1] || "") : String(r), size: 20, font: "Arial", color: DARKTEXT, italics: true }),
+    new TextRun({ text: (Array.isArray(r) ? r[0] : "") + " — ", bold: true, size: 20, font: FONT_BODY, color: NAVY }),
+    new TextRun({ text: Array.isArray(r) ? (r[1] || "") : String(r), size: 20, font: FONT_BODY, color: DARKTEXT, italics: true }),
   ],
 }));
 
@@ -286,13 +283,13 @@ const referenciasParas = REFS.map(r => new Paragraph({
 const footer = new Footer({
   children: [
     new Paragraph({
-      border: { top: { style: BorderStyle.SINGLE, size: 4, color: MIDGREY } },
+      border: { top: { style: BorderStyle.SINGLE, size: 4, color: RULE } },
       spacing: { before: 60 },
       tabStops: [{ type: TabStopType.RIGHT, position: CONTENT_W }],
       children: [
-        new TextRun({ text: "MAG Industries — Servicios de ingeniería CAD/CAM", size: 15, font: "Arial", color: STEEL }),
+        new TextRun({ text: "MAG Industries — Servicios de ingeniería CAD/CAM", size: 15, font: FONT_BODY, color: STEEL }),
         new TextRun({ text: "\t", size: 15 }),
-        new TextRun({ text: "info@magindustries.es · +34 635 013 953", size: 15, font: "Arial", color: STEEL }),
+        new TextRun({ text: "info@magindustries.es · +34 635 013 953", size: 15, font: FONT_BODY, color: STEEL }),
       ],
     }),
   ],

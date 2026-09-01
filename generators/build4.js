@@ -66,15 +66,10 @@ const DOC_DATE = v(D.doc_date, (() => {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 })());
 
-const NAVY = "1B2A41";
-const ORANGE = "E07B39";
-const STEEL = "5A6B7A";
-const LIGHTGREY = "F2F2F2";
-const CARDGREY = "EDEFF1";
-const MIDGREY = "D9D9D9";
-const DARKTEXT = "1A1A1A";
-const REDWARN = "B00020";
-const GREENOK = "1B6E3C";
+// Identidad visual (fuentes y paleta): ver generators/brand.js.
+const {
+  NAVY, GOLD, GREEN_DEEP, TEXT_ON_DARK, DARKTEXT, STEEL, SURFACE, SURFACE_ALT, RULE, REDWARN, FONT_TITLE, FONT_BODY, FONT_BODY_SB, FS, TRACK, titleRun, labelRun,
+} = require("./brand");
 
 const PAGE_W = 16838; // content width landscape (DXA)
 const PAGE_H = 11906; // content height landscape (DXA)
@@ -105,7 +100,7 @@ function labelCell(text, width, opts = {}) {
     verticalAlign: VerticalAlign.CENTER,
     margins: { top: 90, bottom: 90, left: 140, right: 100 },
     borders: cellBorders(),
-    children: [new Paragraph({ children: [new TextRun({ text, bold: true, color: "FFFFFF", size: FS_LABEL, font: "Arial" })] })],
+    children: [new Paragraph({ children: [new TextRun({ text, bold: true, color: "FFFFFF", size: FS_LABEL, font: FONT_BODY })] })],
     ...opts,
   });
 }
@@ -116,7 +111,7 @@ function valueCell(text, width, opts = {}) {
     margins: { top: 90, bottom: 90, left: 140, right: 100 },
     borders: cellBorders(),
     shading: { type: ShadingType.CLEAR, color: "auto", fill: "FFFFFF" },
-    children: [new Paragraph({ children: [new TextRun({ text, size: FS_VALUE, font: "Arial", color: DARKTEXT, bold: !!opts.bold, italics: !!opts.italic })] })],
+    children: [new Paragraph({ children: [new TextRun({ text, size: FS_VALUE, font: FONT_BODY, color: DARKTEXT, bold: !!opts.bold, italics: !!opts.italic })] })],
     ...opts,
   });
 }
@@ -127,7 +122,7 @@ function headCell(text, width) {
     verticalAlign: VerticalAlign.CENTER,
     margins: { top: 90, bottom: 90, left: 90, right: 90 },
     borders: cellBorders(),
-    children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text, bold: true, color: "FFFFFF", size: FS_TH, font: "Arial" })] })],
+    children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text, bold: true, color: "FFFFFF", size: FS_TH, font: FONT_BODY })] })],
   });
 }
 function dataCell(text, width, opts = {}) {
@@ -139,7 +134,7 @@ function dataCell(text, width, opts = {}) {
     shading: { type: ShadingType.CLEAR, color: "auto", fill: opts.fill || "FFFFFF" },
     children: [new Paragraph({
       alignment: opts.align || AlignmentType.LEFT,
-      children: [new TextRun({ text, size: FS_TD, bold: !!opts.bold, color: opts.color || DARKTEXT, font: "Arial", italics: !!opts.italic })],
+      children: [new TextRun({ text, size: FS_TD, bold: !!opts.bold, color: opts.color || DARKTEXT, font: FONT_BODY, italics: !!opts.italic })],
     })],
   });
 }
@@ -147,8 +142,8 @@ function sectionHeader(text) {
   return new Paragraph({
     spacing: { before: 200, after: 120 },
     shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY },
-    border: { left: { style: BorderStyle.SINGLE, size: 36, color: ORANGE, space: 4 } },
-    children: [new TextRun({ text: "   " + text, bold: true, color: "FFFFFF", size: FS_SECTION, font: "Arial" })],
+    border: { left: { style: BorderStyle.SINGLE, size: 36, color: GOLD, space: 4 } },
+    children: [new TextRun({ text: "   " + text, bold: true, color: "FFFFFF", size: FS_SECTION, font: FONT_BODY })],
   });
 }
 
@@ -172,23 +167,23 @@ function buildHeaderTable(titleLine1, titleLine2) {
         new TableCell({
           width: { size: 5250, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(), margins: { top: 40, bottom: 40, left: 0, right: 0 },
           children: [
-            new Paragraph({ children: [new TextRun({ text: "MAG INDUSTRIES", bold: true, size: FS_TITLE, font: "Arial", color: NAVY })] }),
-            new Paragraph({ children: [new TextRun({ text: "Servicios de ingeniería CAD/CAM", italics: true, size: FS_META + 2, font: "Arial", color: STEEL })] }),
+            new Paragraph({ children: [new TextRun(titleRun("MAG INDUSTRIES", FS_TITLE, NAVY))] }),
+            new Paragraph({ children: [new TextRun({ text: "Servicios de ingeniería CAD/CAM", size: FS_META + 2, font: FONT_BODY, color: STEEL, characterSpacing: 14 })] }),
           ],
         }),
         new TableCell({
           width: { size: 4150, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(),
           children: [
-            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: titleLine1, bold: true, size: FS_SUBTITLE + 2, font: "Arial", color: DARKTEXT })] }),
-            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: titleLine2, bold: true, size: FS_SUBTITLE - 4, font: "Arial", color: ORANGE })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: titleLine1, bold: true, size: FS_SUBTITLE + 2, font: FONT_BODY, color: DARKTEXT })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: titleLine2, bold: true, size: FS_SUBTITLE - 4, font: FONT_BODY, color: GOLD })] }),
           ],
         }),
         new TableCell({
           width: { size: 5156, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(), margins: { top: 40, bottom: 40, left: 0, right: 0 },
           children: [
-            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Doc. Nº: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: DOC_NUM, size: FS_META, font: "Arial", bold: true, color: DARKTEXT })] }),
-            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Fecha: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: DOC_DATE, size: FS_META, font: "Arial" })] }),
-            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Revisión: ", size: FS_META, font: "Arial", color: STEEL }), new TextRun({ text: REVISION, size: FS_META, font: "Arial" })] }),
+            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Doc. Nº: ", size: FS_META, font: FONT_BODY, color: STEEL }), new TextRun({ text: DOC_NUM, size: FS_META, font: FONT_BODY, bold: true, color: DARKTEXT })] }),
+            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Fecha: ", size: FS_META, font: FONT_BODY, color: STEEL }), new TextRun({ text: DOC_DATE, size: FS_META, font: FONT_BODY })] }),
+            new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: "Revisión: ", size: FS_META, font: FONT_BODY, color: STEEL }), new TextRun({ text: REVISION, size: FS_META, font: FONT_BODY })] }),
           ],
         }),
       ],
@@ -275,12 +270,12 @@ const imagenPiezaCell = new TableCell({
   width: { size: RIGHT_W, type: WidthType.DXA },
   verticalAlign: VerticalAlign.TOP,
   borders: cellBorders({ top: dashedBorder, bottom: dashedBorder, left: dashedBorder, right: dashedBorder }),
-  shading: { type: ShadingType.CLEAR, color: "auto", fill: CARDGREY },
+  shading: { type: ShadingType.CLEAR, color: "auto", fill: SURFACE_ALT },
   margins: { top: 140, bottom: 140, left: 140, right: 140 },
   children: [
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 100 }, children: [new TextRun({ text: "VISTA DEL BRUTO Y PIEZA", bold: true, size: FS_CARD_LABEL, font: "Arial", color: STEEL })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 100 }, children: [new TextRun(labelRun("VISTA DEL BRUTO Y PIEZA", FS_CARD_LABEL, STEEL))] }),
     new Paragraph({ alignment: AlignmentType.CENTER, children: [piezaImage] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100 }, children: [new TextRun({ text: "Origen y dimensiones de bruto/pieza extraídos del Setup Sheet de Fusion 360", italics: true, size: FS_FOOTSMALL + 1, font: "Arial", color: STEEL })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100 }, children: [new TextRun({ text: "Origen y dimensiones de bruto/pieza extraídos del Setup Sheet de Fusion 360", italics: true, size: FS_FOOTSMALL + 1, font: FONT_BODY, color: STEEL })] }),
   ],
 });
 
@@ -289,9 +284,9 @@ const leftCellContent = new TableCell({
   borders: noBorders(),
   margins: { top: 0, bottom: 0, left: 0, right: 100 },
   children: [
-    new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: "DATOS GENERALES", bold: true, size: FS_SECTION - 2, font: "Arial", color: NAVY })] }),
+    new Paragraph({ spacing: { after: 80 }, children: [new TextRun(labelRun("DATOS GENERALES", FS_SECTION - 2, NAVY))] }),
     datosGeneralesTable,
-    new Paragraph({ spacing: { before: 160, after: 80 }, children: [new TextRun({ text: "RESUMEN GLOBAL DEL PROGRAMA", bold: true, size: FS_SECTION - 2, font: "Arial", color: NAVY })] }),
+    new Paragraph({ spacing: { before: 160, after: 80 }, children: [new TextRun(labelRun("RESUMEN GLOBAL DEL PROGRAMA", FS_SECTION - 2, NAVY))] }),
     resumenTable,
   ],
 });
@@ -308,8 +303,8 @@ function specLine(label, value, opts = {}) {
   return new Paragraph({
     spacing: { after: 40 },
     children: [
-      new TextRun({ text: label + ": ", bold: true, size: FS_CARD_LABEL, font: "Arial", color: STEEL }),
-      new TextRun({ text: value, size: FS_CARD_VALUE, font: "Arial", color: opts.color || DARKTEXT, bold: !!opts.bold }),
+      new TextRun({ text: label + ": ", bold: true, size: FS_CARD_LABEL, font: FONT_BODY, color: STEEL }),
+      new TextRun({ text: value, size: FS_CARD_VALUE, font: FONT_BODY, color: opts.color || DARKTEXT, bold: !!opts.bold }),
     ],
   });
 }
@@ -337,9 +332,9 @@ function toolImageContent(n, tool) {
   }
   return [
     new Paragraph({ text: "" }), new Paragraph({ text: "" }),
-    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "PEGAR RENDER", italics: true, size: FS_FOOTSMALL + 2, font: "Arial", color: "8A94A0" })] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Fusion 360 › Utillaje", italics: true, size: FS_FOOTSMALL + 2, font: "Arial", color: "8A94A0" })] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `T${n} + cono`, italics: true, size: FS_FOOTSMALL + 2, font: "Arial", color: "8A94A0" })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "PEGAR RENDER", italics: true, size: FS_FOOTSMALL + 2, font: FONT_BODY, color: "8A94A0" })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Fusion 360 › Utillaje", italics: true, size: FS_FOOTSMALL + 2, font: FONT_BODY, color: "8A94A0" })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `T${n} + cono`, italics: true, size: FS_FOOTSMALL + 2, font: FONT_BODY, color: "8A94A0" })] }),
     new Paragraph({ text: "" }), new Paragraph({ text: "" }),
   ];
 }
@@ -359,7 +354,7 @@ function buildToolCard(n, tipo, diam, resq, long, flutes, soporte, refrig, refri
           shading: { type: ShadingType.CLEAR, color: "auto", fill: bannerColor },
           margins: { top: 70, bottom: 70, left: 140, right: 140 },
           borders: cellBorders(),
-          children: [new Paragraph({ children: [new TextRun({ text: `T${n}  ·  ${tipo}`, bold: true, color: "FFFFFF", size: FS_CARD_TITLE, font: "Arial" })] })],
+          children: [new Paragraph({ children: [new TextRun({ text: `T${n}  ·  ${tipo}`, bold: true, color: "FFFFFF", size: FS_CARD_TITLE, font: FONT_BODY })] })],
         })],
       }),
       new TableRow({
@@ -367,7 +362,7 @@ function buildToolCard(n, tipo, diam, resq, long, flutes, soporte, refrig, refri
           new TableCell({
             width: { size: CARD_IMG_W, type: WidthType.DXA },
             verticalAlign: VerticalAlign.CENTER,
-            shading: { type: ShadingType.CLEAR, color: "auto", fill: CARDGREY },
+            shading: { type: ShadingType.CLEAR, color: "auto", fill: SURFACE_ALT },
             borders: cellBorders({ top: noBorder, bottom: noBorder, left: noBorder, right: dashedBorder }),
             margins: { top: 100, bottom: 100, left: 80, right: 80 },
             children: toolImageContent(n, tool),
@@ -509,7 +504,7 @@ const herramientasCompacta = new Table({
     new TableRow({ children: compactHeaders.map((h, i) => headCell(h, compactCols[i])) }),
     ...tools.map((t, i) => {
       const ci = coolantInfo(t.coolant);
-      const fill = i % 2 === 0 ? "FFFFFF" : LIGHTGREY;
+      const fill = i % 2 === 0 ? "FFFFFF" : SURFACE;
       return new TableRow({ children: [
         dataCell(`T${v(t.number, "?")}`, compactCols[0], { align: AlignmentType.CENTER, bold: true, fill }),
         dataCell(toolTitle(t), compactCols[1], { fill }),
@@ -529,9 +524,9 @@ const notaRefrigeracion = [
   new Paragraph({
     spacing: { before: 120, after: 40 },
     children: [
-      new TextRun({ text: "Regla de refrigeración MAG Industries:  ", bold: true, size: FS_NOTE, font: "Arial" }),
-      new TextRun({ text: "herramienta corta / bajo voladizo → corte húmedo permitido.  Herramienta larga / alto voladizo (Ej: Diabolo HPC 120 mm) → ", size: FS_NOTE, font: "Arial" }),
-      new TextRun({ text: "SIN refrigerante, corte en seco OBLIGATORIO según ficha técnica del fabricante, sin excepciones.", size: FS_NOTE, font: "Arial", bold: true, color: REDWARN }),
+      new TextRun({ text: "Regla de refrigeración MAG Industries:  ", bold: true, size: FS_NOTE, font: FONT_BODY }),
+      new TextRun({ text: "herramienta corta / bajo voladizo → corte húmedo permitido.  Herramienta larga / alto voladizo (Ej: Diabolo HPC 120 mm) → ", size: FS_NOTE, font: FONT_BODY }),
+      new TextRun({ text: "SIN refrigerante, corte en seco OBLIGATORIO según ficha técnica del fabricante, sin excepciones.", size: FS_NOTE, font: FONT_BODY, bold: true, color: REDWARN }),
     ],
   }),
   // Condiciones declaradas en la ficha del cliente: lo que de verdad hay en
@@ -539,12 +534,12 @@ const notaRefrigeracion = [
   ...(SHOP_COOLANT ? [new Paragraph({
     spacing: { before: 60, after: 40 },
     children: [
-      new TextRun({ text: "Condición de taller declarada por el cliente:  ", bold: true, size: FS_NOTE, font: "Arial" }),
-      new TextRun({ text: SHOP_COOLANT, size: FS_NOTE, font: "Arial", bold: true, color: SHOP_DRY ? REDWARN : NAVY }),
+      new TextRun({ text: "Condición de taller declarada por el cliente:  ", bold: true, size: FS_NOTE, font: FONT_BODY }),
+      new TextRun({ text: SHOP_COOLANT, size: FS_NOTE, font: FONT_BODY, bold: true, color: SHOP_DRY ? REDWARN : NAVY }),
       new TextRun({ text: SHOP_DRY
         ? " — este taller no usa refrigerante líquido: las operaciones marcadas como húmedas en el Setup Sheet se ejecutan bajo esta condición."
         : " — medio de refrigeración empleado en las operaciones húmedas de esta ficha.",
-        size: FS_NOTE, font: "Arial" }),
+        size: FS_NOTE, font: FONT_BODY }),
     ],
   })] : []),
 ];
@@ -588,7 +583,7 @@ const opRows = [
       v(op.tool, "—"),
       v(op.coolant, "Desactivado"),
       ci.color,
-      i % 2 === 0 ? "FFFFFF" : LIGHTGREY,
+      i % 2 === 0 ? "FFFFFF" : SURFACE,
       v(op.rpm, "—"),
       v(op.feedrate, "—"),
       v(op.z_max, "—"),
@@ -621,17 +616,17 @@ function barRow(label, pct, color) {
       borders: noBorders(),
       margins: { top: 60, bottom: 60, left: 100, right: 60 },
       verticalAlign: VerticalAlign.CENTER,
-      children: [new Paragraph({ children: [new TextRun({ text: `${pct}%`, bold: true, color: "FFFFFF", size: FS_TD, font: "Arial" })] })],
+      children: [new Paragraph({ children: [new TextRun({ text: `${pct}%`, bold: true, color: "FFFFFF", size: FS_TD, font: FONT_BODY })] })],
     }),
   ];
   if (spacerW > 0) {
-    barCells.push(new TableCell({ width: { size: spacerW, type: WidthType.DXA }, borders: noBorders(), shading: { type: ShadingType.CLEAR, color: "auto", fill: LIGHTGREY }, children: [new Paragraph({ text: "" })] }));
+    barCells.push(new TableCell({ width: { size: spacerW, type: WidthType.DXA }, borders: noBorders(), shading: { type: ShadingType.CLEAR, color: "auto", fill: SURFACE }, children: [new Paragraph({ text: "" })] }));
   }
   return new TableRow({
     children: [
       new TableCell({
         width: { size: BAR_LABEL_W, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(), margins: { top: 60, bottom: 60, left: 0, right: 120 },
-        children: [new Paragraph({ children: [new TextRun({ text: label, bold: true, size: FS_TD, font: "Arial", color: DARKTEXT })] })],
+        children: [new Paragraph({ children: [new TextRun({ text: label, bold: true, size: FS_TD, font: FONT_BODY, color: DARKTEXT })] })],
       }),
       new TableCell({
         width: { size: BAR_AREA_W, type: WidthType.DXA }, borders: noBorders(), margins: { top: 0, bottom: 0, left: 0, right: 0 },
@@ -663,16 +658,16 @@ function buildFooter() {
   return new Footer({
     children: [
       new Paragraph({
-        border: { top: { style: BorderStyle.SINGLE, size: 4, color: MIDGREY } },
+        border: { top: { style: BorderStyle.SINGLE, size: 4, color: RULE } },
         spacing: { before: 60 },
         tabStops: [{ type: TabStopType.RIGHT, position: CONTENT_W }],
         children: [
-          new TextRun({ text: "MAG Industries — Servicios de ingeniería CAD/CAM", size: FS_FOOT, font: "Arial", color: STEEL }),
+          new TextRun({ text: "MAG Industries — Servicios de ingeniería CAD/CAM", size: FS_FOOT, font: FONT_BODY, color: STEEL }),
           new TextRun({ text: "\t", size: FS_FOOT }),
-          new TextRun({ text: "info@magindustries.es · +34 635 013 953", size: FS_FOOT, font: "Arial", color: STEEL }),
+          new TextRun({ text: "info@magindustries.es · +34 635 013 953", size: FS_FOOT, font: FONT_BODY, color: STEEL }),
         ],
       }),
-      new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Documento de uso interno de taller y evidencia técnica de proceso. Prohibida su distribución sin autorización expresa de MAG Industries.", size: FS_FOOTSMALL, font: "Arial", italics: true, color: "9AA5AF" })] }),
+      new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Documento de uso interno de taller y evidencia técnica de proceso. Prohibida su distribución sin autorización expresa de MAG Industries.", size: FS_FOOTSMALL, font: FONT_BODY, italics: true, color: "9AA5AF" })] }),
     ],
   });
 }

@@ -29,8 +29,12 @@ mag_app/
 │   ├── theme.py            # Tema visual MAG (CSS puro, sin librerías externas)
 │   └── components.py       # Header, dashboard, historial, validación…
 ├── generators/             # Motor de documentos (NO tocar sin revisar los .docx)
+│   ├── brand.js            # Fuentes y colores de marca — única fuente de verdad
 │   ├── build4.js … build8.js
 │   └── *.png               # Logos e iconos que incrustan los documentos
+├── assets/fonts/           # Saira Stencil One y Barlow (licencia OFL) + instalador
+├── scripts/
+│   └── instalar_fuentes.ps1  # Instala las fuentes de marca en Windows
 ├── docs/                   # Documentación histórica del proyecto
 ├── requirements.txt        # Dependencias Python
 ├── packages.txt            # Paquetes de sistema para Streamlit Cloud (nodejs, npm)
@@ -57,6 +61,33 @@ streamlit run streamlit_app.py
 ```
 
 En Windows también puedes hacer doble clic en `iniciar_app.bat`.
+
+## 🔤 Fuentes de marca (importante)
+
+Los documentos usan dos tipografías: **Saira Stencil One** en los titulares y
+**Barlow** en el resto. Son gratuitas y vienen incluidas en `assets/fonts/`.
+
+**Instálalas una vez en cada ordenador donde vayas a ABRIR los documentos.**
+Abre PowerShell en la carpeta del proyecto y pega esta línea:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/instalar_fuentes.ps1
+```
+
+No hace falta ser administrador. Puedes ejecutarlo las veces que quieras: si ya
+están instaladas, te lo dice y no rompe nada.
+
+**¿Por qué importa?** Si Word no encuentra estas fuentes, las cambia por otras
+por su cuenta y el documento sale con las letras mezcladas y descuadrado.
+
+**Para generar no hacen falta.** El motor Node solo escribe el *nombre* de la
+fuente dentro del archivo, así que la app funciona igual en Streamlit Cloud sin
+instalar nada allí. Solo las necesita el ordenador que abre el `.docx`.
+
+> **Al cliente mándale siempre el PDF, no el `.docx`.**
+> Tu cliente no va a tener estas fuentes instaladas. Al exportar a PDF desde tu
+> Word (Archivo → Guardar como → PDF), las fuentes quedan incrustadas dentro del
+> archivo y el documento se ve exactamente igual en cualquier ordenador.
 
 ## 🖥️ Uso
 
