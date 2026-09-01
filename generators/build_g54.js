@@ -48,7 +48,18 @@ const DUREZA = v(D.hardness, "62 HRC");
 const BRUTO = v(D.stock_dims, "[XX x XX x XX mm]");
 const PROGRAMADOR = v(D.programmer, "[NOMBRE]");
 const OPERARIO = v(D.operator, "[NOMBRE]");
-const DOC_NUM = `${PIEZA_REF}-G54-${REVISION}`;
+// Perfil efectivo del cliente (sector + ficha). Vacio al ejecutar suelto.
+const P = (D.profile && typeof D.profile === "object") ? D.profile : {};
+
+// Idea 10 — cada taller tiene su convencion: que origen usa (G54-G59), como
+// llama a los amarres y en que rango numera los programas. La hoja sale ya
+// con la del cliente en lugar de imponer la nuestra.
+const OFFSET = (/^G5[4-9]$/i.test(v(P.work_offset, ""))) ? P.work_offset.toUpperCase() : "G54";
+const PROGRAM_RANGE = v(P.program_range, "");
+const FIXTURE = v(P.fixture_naming, "");
+
+// Idea 12 — numeracion documental propia del cliente si su ficha la define.
+const DOC_NUM = v(D.doc_number, `${PIEZA_REF}-${OFFSET}-${REVISION}`);
 const DOC_DATE = v(D.doc_date, (() => {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, "0");
@@ -141,6 +152,13 @@ const logoImage = new ImageRun({
   transformation: { width: 46, height: 46 },
 });
 
+// Idea 11 — co-branding: logo del cliente junto al de MAG, nunca en su
+// lugar. A 40 px no altera la altura de la fila de cabecera, que es lo que
+// decide si la pagina 1 sigue cabiendo en una hoja.
+const clientLogo = (P.logo_path && fs.existsSync(P.logo_path))
+  ? new ImageRun({ type: "png", data: fs.readFileSync(P.logo_path), transformation: { width: 40, height: 40 } })
+  : null;
+
 const headerTable = new Table({
   width: { size: PAGE_W - 2 * MARGIN, type: WidthType.DXA },
   columnWidths: [1100, 5200, 4200, 5238],
@@ -156,7 +174,7 @@ const headerTable = new Table({
           verticalAlign: VerticalAlign.CENTER,
           borders: cellBorders({ top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }),
           margins: { top: 10, bottom: 10, left: 0, right: 80 },
-          children: [new Paragraph({ children: [logoImage] })],
+          children: [new Paragraph({ children: clientLogo ? [logoImage, new TextRun({ text: " " }), clientLogo] : [logoImage] })],
         }),
         new TableCell({
           width: { size: 5200, type: WidthType.DXA },
@@ -183,7 +201,7 @@ const headerTable = new Table({
             }),
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              children: [new TextRun({ text: "ORIGEN DE PIEZA — G54", bold: true, size: 18, font: "Arial", color: ORANGE })],
+              children: [new TextRun({ text: `ORIGEN DE PIEZA — ${OFFSET}`, bold: true, size: 18, font: "Arial", color: ORANGE })],
             }),
           ],
         }),
@@ -239,7 +257,7 @@ const datosGeneralesTable = new Table({
     ]),
     dataRow([
       ["MÁQUINA", MAQUINA, colA_L, colA_V],
-      ["PROGRAMA CNC", PROGRAMA, colB_L, colB_V],
+      ["PROGRAMA CNC", PROGRAM_RANGE ? `${PROGRAMA}   (rango del cliente: ${PROGRAM_RANGE})` : PROGRAMA, colB_L, colB_V],
       ["POSTPROCESADOR", POSTPRO, colC_L, colC_V],
     ]),
     dataRow([
@@ -356,7 +374,7 @@ const vistasTable = new Table({
   rows: [
     vistaRow([
       ["VISTA FRONTAL (XZ)", VIEWS.frontal, "Win+Shift+S en Fusion 360"],
-      ["VISTA SUPERIOR (XY) — ORIGEN G54", VIEWS.superior, "Debe mostrar el punto de origen"],
+      [`VISTA SUPERIOR (XY) — ORIGEN ${OFFSET}`, VIEWS.superior, "Debe mostrar el punto de origen"],
     ]),
     vistaRow([
       ["VISTA LATERAL (YZ)", VIEWS.lateral, "Win+Shift+S en Fusion 360"],
@@ -428,9 +446,9 @@ const notaRefrigeracion = [
 // ---------- CHECKLIST ----------
 const checklistItems = [
   "Bruto correctamente sujeto y apoyado — sin holguras ni vibración al tacto",
-  "Origen G54 verificado con doble toque (ida y comprobación) en cada eje",
+  `Origen ${OFFSET} verificado con doble toque (ida y comprobación) en cada eje`,
   "Z0 referenciado con la herramienta y offset correctos cargados en el control",
-  "Coordenadas de G54 introducidas coinciden con las indicadas en esta hoja",
+  `Coordenadas de ${OFFSET} introducidas coinciden con las indicadas en esta hoja`,
   "Zona de trabajo libre de obstáculos — verificar recorrido del portaherramientas/cono en simulación",
   "Estado de refrigerante (ON/OFF) verificado según herramienta a utilizar en el arranque",
   "Primera pasada ejecutada en modo Single Block / a velocidad reducida antes de ciclo completo",
@@ -444,6 +462,31 @@ const checklistParas = checklistItems.map(item =>
   })
 );
 
+// ---------- FIRMAS (idea 13: quien firma lo define la ficha del cliente) ----------
+const FIRMAS = (Array.isArray(P.signatures) && P.signatures.length)
+  ? P.signatures.slice(0, 4)
+  : ["Programador — MAG Industries", "Operario ejecutor", "Responsable de taller"];
+const FIRMA_W = Math.floor((PAGE_W - 2 * MARGIN) / FIRMAS.length);
+function firmaBlock(titulo) {
+  return new TableCell({
+    width: { size: FIRMA_W, type: WidthType.DXA },
+    borders: cellBorders({ top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }),
+    margins: { top: 240, bottom: 0, left: 0, right: 240 },
+    children: [
+      new Paragraph({ spacing: { after: 380 }, children: [new TextRun({ text: titulo, bold: true, size: 17, font: "Arial", color: NAVY })] }),
+      new Paragraph({ border: { top: { style: BorderStyle.SINGLE, size: 4, color: MIDGREY } }, children: [new TextRun({ text: "" })] }),
+      new Paragraph({ spacing: { before: 50 }, children: [new TextRun({ text: "Nombre y firma", size: 14, font: "Arial", color: STEEL, italics: true })] }),
+      new Paragraph({ spacing: { before: 120 }, children: [new TextRun({ text: "Fecha: ______________", size: 14, font: "Arial", color: STEEL })] }),
+    ],
+  });
+}
+const firmasTable = new Table({
+  width: { size: PAGE_W - 2 * MARGIN, type: WidthType.DXA },
+  columnWidths: FIRMAS.map(() => FIRMA_W),
+  borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
+  rows: [new TableRow({ children: FIRMAS.map(firmaBlock) })],
+});
+
 // ---------- FOOTER ----------
 const footer = new Footer({
   children: [
@@ -454,7 +497,7 @@ const footer = new Footer({
       children: [
         new TextRun({ text: "MAG Industries — Servicios de ingeniería CAD/CAM", size: 14, font: "Arial", color: STEEL }),
         new TextRun({ text: "\t", size: 14 }),
-        new TextRun({ text: "Alexmakerdesign@gmail.com · +34 635 013 953", size: 14, font: "Arial", color: STEEL }),
+        new TextRun({ text: "info@magindustries.es · +34 635 013 953", size: 14, font: "Arial", color: STEEL }),
       ],
     }),
     new Paragraph({
@@ -500,7 +543,7 @@ const doc = new Document({
         sectionHeader("VISTAS Y ORIGEN DE PIEZA"),
         vistasTable,
         new Paragraph({ children: [new PageBreak()] }),
-        sectionHeader("DESCRIPCIÓN DEL PUNTO G54 — GUÍA PARA EL OPERARIO"),
+        sectionHeader(`DESCRIPCIÓN DEL PUNTO ${OFFSET} — GUÍA PARA EL OPERARIO`),
         ...descripcionG54,
         sectionHeader("MÉTODO DE TOQUEO / REFERENCIADO RECOMENDADO"),
         ...metodoToqueo,
@@ -508,7 +551,7 @@ const doc = new Document({
         new Paragraph({
           spacing: { after: 40 },
           children: [new TextRun({ text: "Utillaje: ", bold: true, size: 18, font: "Arial" }),
-                     new TextRun({ text: "[Ej: mordaza Lang Makro-Grip / bridas / utillaje a medida — especificar modelo]", size: 18, font: "Arial", italics: true, color: STEEL })],
+                     new TextRun({ text: FIXTURE || "[Ej: mordaza Lang Makro-Grip / bridas / utillaje a medida — especificar modelo]", size: 18, font: "Arial", italics: !FIXTURE, color: FIXTURE ? DARKTEXT : STEEL })],
         }),
         new Paragraph({
           spacing: { after: 40 },
@@ -519,6 +562,8 @@ const doc = new Document({
         ...notaRefrigeracion,
         sectionHeader("CHECKLIST DE VERIFICACIÓN PREVIA"),
         ...checklistParas,
+        sectionHeader("VALIDACIÓN"),
+        firmasTable,
       ],
     },
   ],

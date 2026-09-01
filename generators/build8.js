@@ -120,7 +120,7 @@ const closingBanner = new Table({
       borders: noBorders(),
       children: [
         new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Detrás de cada pieza, un proceso de ingeniería documentado.", bold: true, size: 21, font: "Arial", color: "FFFFFF" })] }),
-        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100 }, children: [new TextRun({ text: "MAG Industries · Servicios de ingeniería CAD/CAM · Alexmakerdesign@gmail.com · +34 635 013 953", size: 15, font: "Arial", color: "C9D2DC" })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100 }, children: [new TextRun({ text: "MAG Industries · Servicios de ingeniería CAD/CAM · info@magindustries.es · +34 635 013 953", size: 15, font: "Arial", color: "C9D2DC" })] }),
       ],
     })],
   })],

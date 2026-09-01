@@ -15,6 +15,10 @@ generators/*.docx
 # Streamlit
 .streamlit/secrets.toml
 
+# Fichas de cliente: contienen nombres reales de clientes (regla 6)
+data/clients.json
+data/*.json
+
 # Sistema / editor
 .DS_Store
 Thumbs.db

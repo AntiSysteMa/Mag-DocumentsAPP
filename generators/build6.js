@@ -23,10 +23,26 @@ const v = (value, fallback) => {
   return s === "" ? fallback : s;
 };
 
+// Perfil efectivo del cliente (sector + ficha). Vacio al ejecutar suelto.
+const P = (D.profile && typeof D.profile === "object") ? D.profile : {};
+
 const REVISION = v(D.revision, "00");
 const PIEZA_REF = v(D.project_ref, "[REF-PIEZA]");
-const DOC_NUM = `${PIEZA_REF}-QC-${REVISION}`;
+// Idea 12 — si la ficha del cliente define su propia numeracion documental,
+// manda esa; si no, el codigo interno de siempre.
+const DOC_NUM = v(D.doc_number, `${PIEZA_REF}-QC-${REVISION}`);
 const INSPECTION_DATE = v(D.inspection_date, "[DD/MM/AAAA]");
+
+// Idea 4 — tolerancia general por defecto del cliente.
+const TOL_DEFAULT = v(P.tolerance, "±[__] mm");
+
+// Idea 5 — plan de control dimensional: cuantas cotas, cuantas criticas y
+// con que instrumentos, segun el sector del cliente.
+const QC = (P.qc && typeof P.qc === "object") ? P.qc : {};
+const QC_N = Math.max(1, Math.min(30, parseInt(QC.dimension_count, 10) || 5));
+const QC_CRIT = Math.max(0, Math.min(QC_N, parseInt(QC.critical_count, 10) || 0));
+const QC_INSTR = (Array.isArray(QC.instruments) && QC.instruments.length)
+  ? QC.instruments : ["Calibre / Micrómetro"];
 
 const NAVY = "1B2A41";
 const ORANGE = "E07B39";
@@ -123,13 +139,19 @@ function phaseHeader(text, color) {
 // ---------- HEADER ----------
 const logoImage = new ImageRun({ type: "png", data: fs.readFileSync("logo_claro.png"), transformation: { width: 66, height: 66 } });
 
+// Idea 11 — co-branding: se anade el logo del cliente junto al de MAG, sin
+// sustituirlo. Un logo ausente deja la cabecera exactamente como estaba.
+const clientLogo = (P.logo_path && fs.existsSync(P.logo_path))
+  ? new ImageRun({ type: "png", data: fs.readFileSync(P.logo_path), transformation: { width: 50, height: 50 } })
+  : null;
+
 const headerTable = new Table({
   width: { size: CONTENT_W, type: WidthType.DXA },
   columnWidths: [1150, 5250, 4150, 5156],
   borders: { top: noBorder, bottom: { style: BorderStyle.SINGLE, size: 16, color: NAVY }, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
   rows: [new TableRow({
     children: [
-      new TableCell({ width: { size: 1150, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(), margins: { top: 40, bottom: 40, left: 0, right: 80 }, children: [new Paragraph({ children: [logoImage] })] }),
+      new TableCell({ width: { size: 1150, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(), margins: { top: 40, bottom: 40, left: 0, right: 80 }, children: [new Paragraph({ children: clientLogo ? [logoImage, new TextRun({ text: " " }), clientLogo] : [logoImage] })] }),
       new TableCell({
         width: { size: 5250, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(),
         children: [
@@ -170,7 +192,10 @@ const datosGeneralesTable = new Table({
     fullRow("MATERIAL / DUREZA", v(D.material, "[Material] / [Dureza]"), D.material ? {} : { italic: true, color: STEEL }),
     fullRow("Nº PLANO / REVISIÓN", "[__] / [__]", { italic: true, color: STEEL }),
     fullRow("INSPECTOR", "[Nombre]", { italic: true, color: STEEL }),
-    fullRow("INSTRUMENTOS UTILIZADOS", "[Ej: calibre, micrómetro, rugosímetro, durómetro]", { italic: true, color: STEEL }),
+    fullRow("INSTRUMENTOS UTILIZADOS", QC_INSTR.join("  ·  "),
+      P.qc ? {} : { italic: true, color: STEEL }),
+    fullRow("TOLERANCIA GENERAL", TOL_DEFAULT,
+      P.tolerance ? {} : { italic: true, color: STEEL }),
   ],
 });
 
@@ -252,13 +277,37 @@ const filasDiseno = [
   ctrlRow(3, "DIM", "Cota crítica de diseño a validar antes de programar CAM", "[__]", "[__]", "[__]", "Revisión de plano", "[OK/NOK]", "[__]", "FFFFFF"),
 ];
 
-const filasMecanizado = [
-  ctrlRow(1, "DIM", "[Ej: Cota X — ancho de bolsa mecanizada]", "[__] mm", "±[__] mm", "[__] mm", "Calibre / Micrómetro", "[OK/NOK]", "[__]", "FFFFFF"),
-  ctrlRow(2, "DIM", "[Ej: Profundidad Z de cavidad]", "[__] mm", "±[__] mm", "[__] mm", "Calibre de profundidad", "[OK/NOK]", "[__]", LIGHTGREY),
-  ctrlRow(3, "GEO", "[Ej: Paralelismo cara superior respecto a base]", "[__]", "[__]", "[__]", "Reloj comparador", "[OK/NOK]", "[__]", "FFFFFF"),
-  ctrlRow(4, "SUP", "[Ej: Rugosidad Ra en zona de acabado]", "Ra [__]", "±[__]", "Ra [__]", "Rugosímetro", "[OK/NOK]", "[__]", LIGHTGREY),
-  ctrlRow(5, "REF", "Verificación de origen G54 tras mecanizado (coincide con hoja de punto cero)", "[__]", "[__]", "[__]", "Sonda / Buscador de bordes", "[OK/NOK]", "[__]", "FFFFFF"),
-];
+// El plan de control ya no es una lista fija: el sector del cliente decide
+// cuantos puntos se controlan, cuantos son criticos y con que se miden. Las
+// filas criticas van primero y quedan marcadas, para que el inspector no
+// pueda pasarlas por alto.
+function planMecanizado() {
+  const filas = [];
+  for (let i = 0; i < QC_N; i++) {
+    const critica = i < QC_CRIT;
+    const instrumento = QC_INSTR[i % QC_INSTR.length];
+    // Las criticas son siempre dimensionales; el resto alterna tipo de control.
+    const tipo = critica ? "DIM" : ["DIM", "GEO", "SUP"][(i - QC_CRIT) % 3];
+    const desc = critica
+      ? `COTA CRÍTICA ${i + 1} — [descripción según plano]`
+      : ({
+          DIM: `[Cota ${i + 1} — dimensión a verificar]`,
+          GEO: `[Cota ${i + 1} — tolerancia geométrica (planitud / paralelismo / posición)]`,
+          SUP: `[Cota ${i + 1} — rugosidad Ra en zona de acabado]`,
+        })[tipo];
+    const valor = tipo === "SUP" ? "Ra [__]" : "[__] mm";
+    filas.push(ctrlRow(i + 1, tipo, desc, valor, TOL_DEFAULT, valor, instrumento,
+      "[OK/NOK]", critica ? "CRÍTICA — verificación obligatoria" : "[__]",
+      i % 2 === 0 ? "FFFFFF" : LIGHTGREY));
+  }
+  // El origen G54 se comprueba siempre, sea cual sea el plan del cliente.
+  filas.push(ctrlRow(QC_N + 1, "REF",
+    "Verificación de origen G54 tras mecanizado (coincide con hoja de punto cero)",
+    "[__]", "[__]", "[__]", "Sonda / Buscador de bordes", "[OK/NOK]", "[__]",
+    QC_N % 2 === 0 ? "FFFFFF" : LIGHTGREY));
+  return filas;
+}
+const filasMecanizado = planMecanizado();
 
 const filasPostProceso = [
   ctrlRow(1, "TRAT", "Dureza final tras tratamiento térmico", "[__] HRC", "±[__] HRC", "[__] HRC", "Durómetro", "[OK/NOK]", "[__]", "FFFFFF"),
@@ -278,9 +327,9 @@ const notaMetodologica = new Paragraph({
 });
 
 // ---------- FIRMAS ----------
-function firmaBlock(titulo) {
+function firmaBlock(titulo, width) {
   return new TableCell({
-    width: { size: Math.floor(CONTENT_W / 3), type: WidthType.DXA }, borders: noBorders(), margins: { top: 300, bottom: 0, left: 0, right: 260 },
+    width: { size: width || Math.floor(CONTENT_W / 3), type: WidthType.DXA }, borders: noBorders(), margins: { top: 300, bottom: 0, left: 0, right: 260 },
     children: [
       new Paragraph({ spacing: { after: 500 }, children: [new TextRun({ text: titulo, bold: true, size: FS_LABEL, font: "Arial", color: NAVY })] }),
       new Paragraph({ border: { top: { style: BorderStyle.SINGLE, size: 4, color: MIDGREY } }, children: [new TextRun({ text: "" })] }),
@@ -289,7 +338,12 @@ function firmaBlock(titulo) {
     ],
   });
 }
-const firmasTable = new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: [Math.floor(CONTENT_W / 3), Math.floor(CONTENT_W / 3), Math.floor(CONTENT_W / 3)], borders: noBorders(), rows: [new TableRow({ children: [firmaBlock("Inspector"), firmaBlock("Responsable de Calidad — MAG Industries"), firmaBlock("Cliente (si aplica)")] })] });
+// Idea 13 — quien firma y en que orden lo define la ficha del cliente.
+const FIRMAS = (Array.isArray(P.signatures) && P.signatures.length)
+  ? P.signatures.slice(0, 4)
+  : ["Inspector", "Responsable de Calidad — MAG Industries", "Cliente (si aplica)"];
+const FIRMA_W = Math.floor(CONTENT_W / FIRMAS.length);
+const firmasTable = new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: FIRMAS.map(() => FIRMA_W), borders: noBorders(), rows: [new TableRow({ children: FIRMAS.map(t => firmaBlock(t, FIRMA_W)) })] });
 
 // ---------- FOOTER ----------
 function buildFooter() {
@@ -301,7 +355,7 @@ function buildFooter() {
         children: [
           new TextRun({ text: "MAG Industries — Servicios de ingeniería CAD/CAM", size: FS_FOOT, font: "Arial", color: STEEL }),
           new TextRun({ text: "\t", size: FS_FOOT }),
-          new TextRun({ text: "Alexmakerdesign@gmail.com · +34 635 013 953", size: FS_FOOT, font: "Arial", color: STEEL }),
+          new TextRun({ text: "info@magindustries.es · +34 635 013 953", size: FS_FOOT, font: "Arial", color: STEEL }),
         ],
       }),
       new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Documento de evidencia técnica de control de calidad. Prohibida su distribución sin autorización expresa de MAG Industries.", size: FS_FOOTSMALL, font: "Arial", italics: true, color: "9AA5AF" })] }),

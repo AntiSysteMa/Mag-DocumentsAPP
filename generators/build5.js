@@ -23,6 +23,15 @@ const v = (value, fallback) => {
   return s === "" ? fallback : s;
 };
 
+// Perfil efectivo del cliente (sector + ficha). Vacío al ejecutar suelto.
+const P = (D.profile && typeof D.profile === "object") ? D.profile : {};
+
+// Idea 11 — co-branding: logo del cliente junto al de MAG. La marca MAG no se
+// sustituye nunca; solo se añade la del cliente a su derecha.
+const clientLogo = (P.logo_path && fs.existsSync(P.logo_path))
+  ? new ImageRun({ type: "png", data: fs.readFileSync(P.logo_path), transformation: { width: 52, height: 52 } })
+  : null;
+
 const DOC_DATE = v(D.doc_date, (() => {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, "0");
@@ -65,7 +74,7 @@ const headerTable = new Table({
   borders: { top: noBorder, bottom: { style: BorderStyle.SINGLE, size: 16, color: NAVY }, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
   rows: [new TableRow({
     children: [
-      new TableCell({ width: { size: 1000, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(), margins: { top: 40, bottom: 40, left: 0, right: 80 }, children: [new Paragraph({ children: [logoImage] })] }),
+      new TableCell({ width: { size: 1000, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(), margins: { top: 40, bottom: 40, left: 0, right: 80 }, children: [new Paragraph({ children: clientLogo ? [logoImage, new TextRun({ text: "  " }), clientLogo] : [logoImage] })] }),
       new TableCell({
         width: { size: 5200, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: noBorders(),
         children: [
@@ -149,18 +158,20 @@ const especificacionesTable = new Table({
     specRow("MATERIAL", v(D.material, "[Material y tratamiento]")),
     specRow("CANTIDAD", v(D.quantity, "[Nº de unidades]")),
     specRow("MÁQUINA / PROCESO", v(D.machine_process, "[Máquina y proceso de fabricación]")),
-    specRow("TOLERANCIAS", v(D.tolerances, "Según DIN ISO 2768-mK, salvo indicación específica en plano")),
+    specRow("TOLERANCIAS", v(D.tolerances, v(P.tolerance, "Según DIN ISO 2768-mK, salvo indicación específica en plano"))),
   ],
 });
 
 // ---------- ENTREGABLES ----------
-const entregablesItems = (Array.isArray(D.deliverables) && D.deliverables.length) ? D.deliverables : [
+const entregablesItems = (Array.isArray(D.deliverables) && D.deliverables.length)
+  ? D.deliverables
+  : ((Array.isArray(P.deliverables) && P.deliverables.length) ? P.deliverables : [
   "Programación CAM completa y verificada (simulación de colisiones incluida)",
   "Mecanizado de desbaste y acabado de las piezas según especificación",
   "Ficha de taller y hoja de herramientas de cada fase (documentación de proceso)",
   "Control dimensional final bajo plano, con reporte de calidad",
   "Piezas terminadas, limpias y embaladas para entrega",
-];
+]);
 const entregablesParas = entregablesItems.map(t => new Paragraph({
   numbering: { reference: "entregables-list", level: 0 },
   spacing: { after: 70 },
@@ -227,7 +238,9 @@ const inversionBox = new Table({
 const condicionesItems = [
   "Precio fijo cerrado por el alcance descrito; no varía en función del tiempo real de mecanizado.",
   "El plazo de entrega comienza a contar desde la recepción del bruto y los planos definitivos.",
-  "Oferta válida durante 30 días naturales desde la fecha de este documento.",
+  `Oferta válida durante ${v(D.valid_until, v(P.offer_validity, "30 días naturales desde la fecha de este documento"))}.`,
+  ...(v(P.payment_terms, "") ? [`Condiciones de pago acordadas: ${P.payment_terms}.`] : []),
+  ...(v(P.rate_hour, "") ? [`Trabajos fuera del alcance descrito se presupuestan aparte a la tarifa acordada de ${P.rate_hour} €/h.`] : []),
   "MAG Industries se compromete a tratar los planos, modelos 3D y toda información técnica del cliente con estricta confidencialidad, respetando su propiedad intelectual. Dicha información se utilizará exclusivamente para la ejecución de este proyecto y no se compartirá, reproducirá ni cederá a terceros sin autorización expresa del cliente.",
 ];
 const condicionesParas = condicionesItems.map(t => new Paragraph({
@@ -237,9 +250,9 @@ const condicionesParas = condicionesItems.map(t => new Paragraph({
 }));
 
 // ---------- ACEPTACIÓN ----------
-function firmaBlock(titulo) {
+function firmaBlock(titulo, width) {
   return new TableCell({
-    width: { size: CONTENT_W / 2, type: WidthType.DXA },
+    width: { size: width || Math.floor(CONTENT_W / 2), type: WidthType.DXA },
     borders: noBorders(),
     margins: { top: 300, bottom: 0, left: 0, right: 200 },
     children: [
@@ -250,7 +263,24 @@ function firmaBlock(titulo) {
     ],
   });
 }
-const aceptacionTable = new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: [CONTENT_W / 2, CONTENT_W / 2], borders: noBorders(), rows: [new TableRow({ children: [firmaBlock("Por MAG Industries"), firmaBlock("Por el Cliente")] })] });
+// Idea 13 — quién firma lo define la ficha del cliente; si no dice nada, se
+// mantienen las dos firmas de siempre.
+const FIRMAS = (Array.isArray(P.signatures) && P.signatures.length)
+  ? P.signatures.slice(0, 4)
+  : ["Por MAG Industries", "Por el Cliente"];
+const FIRMA_W = Math.floor(CONTENT_W / FIRMAS.length);
+const aceptacionTable = new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: FIRMAS.map(() => FIRMA_W), borders: noBorders(), rows: [new TableRow({ children: FIRMAS.map(t => firmaBlock(t, FIRMA_W)) })] });
+
+// ---------- TRABAJOS SIMILARES (idea 19: filtrados por sector) ----------
+// Solo aparece si la ficha del cliente trae referencias de su sector.
+const REFS = (Array.isArray(P.references) && P.references.length) ? P.references.slice(0, 3) : [];
+const referenciasParas = REFS.map(r => new Paragraph({
+  spacing: { after: 90 },
+  children: [
+    new TextRun({ text: (Array.isArray(r) ? r[0] : "") + " — ", bold: true, size: 20, font: "Arial", color: NAVY }),
+    new TextRun({ text: Array.isArray(r) ? (r[1] || "") : String(r), size: 20, font: "Arial", color: DARKTEXT, italics: true }),
+  ],
+}));
 
 // ---------- FOOTER ----------
 const footer = new Footer({
@@ -262,7 +292,7 @@ const footer = new Footer({
       children: [
         new TextRun({ text: "MAG Industries — Servicios de ingeniería CAD/CAM", size: 15, font: "Arial", color: STEEL }),
         new TextRun({ text: "\t", size: 15 }),
-        new TextRun({ text: "Alexmakerdesign@gmail.com · +34 635 013 953", size: 15, font: "Arial", color: STEEL }),
+        new TextRun({ text: "info@magindustries.es · +34 635 013 953", size: 15, font: "Arial", color: STEEL }),
       ],
     }),
   ],
@@ -296,6 +326,9 @@ const doc = new Document({
         sectionHeader("INVERSIÓN"),
         new Paragraph({ text: "", spacing: { after: 60 } }),
         inversionBox,
+        ...(referenciasParas.length
+          ? [sectionHeader(`TRABAJOS SIMILARES${v(P.sector_label, "") ? " — " + P.sector_label : ""}`), ...referenciasParas]
+          : []),
         sectionHeader("CONDICIONES"),
         ...condicionesParas,
         new Paragraph({ text: "", spacing: { after: 300 } }),

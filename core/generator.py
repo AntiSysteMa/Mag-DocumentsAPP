@@ -73,7 +73,8 @@ def ensure_node_modules():
 
 
 def generate_document(doc_type, data, client_name, material, programmer,
-                      extra=None, tool_images=None, view_images=None):
+                      extra=None, tool_images=None, view_images=None,
+                      profile=None):
     """Ejecuta el script Node.js correspondiente y devuelve el documento.
 
     Devuelve (docx_bytes, filename, None) en éxito o (None, None, error).
@@ -97,6 +98,7 @@ def generate_document(doc_type, data, client_name, material, programmer,
     temp_data_file = tempfile.NamedTemporaryFile(
         mode='w', suffix='.json', delete=False, encoding='utf-8')
     temp_img_path = None
+    temp_logo_path = None
     tool_img_paths = []
     view_img_paths = []
     try:
@@ -107,6 +109,24 @@ def generate_document(doc_type, data, client_name, material, programmer,
             'programmer': programmer,
         })
         payload.update(extra or {})
+
+        # Perfil del cliente (sector + ficha): personaliza tolerancias, plan de
+        # control, nivel de detalle, firmas, tarifa, textos por sector… El logo
+        # de co-branding viaja en base64 y aquí se vuelca a un archivo, porque
+        # los scripts Node leen imágenes de disco.
+        if profile:
+            prof = {k: v for k, v in profile.items() if k != 'logo_b64'}
+            logo_b64 = profile.get('logo_b64')
+            if logo_b64:
+                try:
+                    logo = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+                    logo.write(base64.b64decode(logo_b64))
+                    logo.close()
+                    temp_logo_path = logo.name
+                    prof['logo_path'] = temp_logo_path
+                except (binascii.Error, ValueError, OSError):
+                    pass  # logo ilegible: la cabecera queda solo con la marca MAG
+            payload['profile'] = prof
 
         # Renders de herramienta: se reescalan aquí para que su tamaño
         # original no pueda descuadrar la tarjeta, y se pasan ya medidos.
@@ -196,7 +216,8 @@ def generate_document(doc_type, data, client_name, material, programmer,
     except Exception as e:  # noqa: BLE001 — el error se muestra en la UI
         return None, None, f"Error durante generación: {e}"
     finally:
-        for path in [temp_data_file.name, temp_img_path, *tool_img_paths, *view_img_paths]:
+        for path in [temp_data_file.name, temp_img_path, temp_logo_path,
+                     *tool_img_paths, *view_img_paths]:
             if path:
                 try:
                     os.unlink(path)
